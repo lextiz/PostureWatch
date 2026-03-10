@@ -2,5 +2,20 @@
 name = "posturewatch"
 version = "0.1.0"
 edition = "2021"
+description = "Posture monitoring app with webcam and LLM"
 
 [dependencies]
+tokio = { version = "1.32", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "multipart", "rustls-tls"], default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+config = "0.13"
+anyhow = "1.0"
+directories = "5.0"
+base64 = "0.21"
+image = "0.24"
+chrono = "0.4"
+nokhwa = { version = "0.10.4", features = ["input-native"] }
+winit = "0.28"
+tao = "0.16"
+notify-rust = "4.9"
