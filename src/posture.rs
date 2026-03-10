@@ -1,8 +1,8 @@
 use crate::config::Config;
 use anyhow::Result;
+use base64::Engine;
 use reqwest::Client;
 use serde_json::json;
-use base64::Engine;
 
 pub enum PostureStatus {
     Good,
