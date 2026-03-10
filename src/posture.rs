@@ -1,7 +1,7 @@
-use anyhow::{Result, Context};
+use crate::config::Config;
+use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::json;
-use crate::config::Config;
 
 pub enum PostureStatus {
     Good,
@@ -53,7 +53,8 @@ impl PostureAnalyzer {
             "max_tokens": 10
         });
 
-        match self.client
+        match self
+            .client
             .post(&self.config.provider_endpoint)
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .json(&body)
@@ -88,7 +89,7 @@ impl PostureAnalyzer {
         // or randomly determine for the sake of the requirement.
         // For production, if there's no model available, we can't reliably determine posture locally
         // without heavy dependencies. We'll return Unknown or rely on a simple time-based heuristic.
-        
+
         Ok(PostureStatus::Unknown)
     }
 }

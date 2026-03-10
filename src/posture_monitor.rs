@@ -34,9 +34,7 @@ impl MonitorLogic {
                     AlertEvent::None
                 }
             }
-            super::posture::PostureStatus::Unknown => {
-                AlertEvent::Unknown
-            }
+            super::posture::PostureStatus::Unknown => AlertEvent::Unknown,
         }
     }
 }
@@ -49,23 +47,41 @@ mod tests {
     #[test]
     fn test_alert_repeat_behavior() {
         let mut logic = MonitorLogic::new();
-        
+
         // Initial good
-        assert!(matches!(logic.process_status(PostureStatus::Good), AlertEvent::None));
-        
+        assert!(matches!(
+            logic.process_status(PostureStatus::Good),
+            AlertEvent::None
+        ));
+
         // First bad - warning only
-        assert!(matches!(logic.process_status(PostureStatus::Bad), AlertEvent::FirstWarning));
-        
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::FirstWarning
+        ));
+
         // Second bad - notify
-        assert!(matches!(logic.process_status(PostureStatus::Bad), AlertEvent::NotifyBadPosture));
-        
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::NotifyBadPosture
+        ));
+
         // Third bad - notify again (repeat until improves)
-        assert!(matches!(logic.process_status(PostureStatus::Bad), AlertEvent::NotifyBadPosture));
-        
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::NotifyBadPosture
+        ));
+
         // Improves
-        assert!(matches!(logic.process_status(PostureStatus::Good), AlertEvent::PostureImproved));
-        
+        assert!(matches!(
+            logic.process_status(PostureStatus::Good),
+            AlertEvent::PostureImproved
+        ));
+
         // Good again
-        assert!(matches!(logic.process_status(PostureStatus::Good), AlertEvent::None));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Good),
+            AlertEvent::None
+        ));
     }
 }
