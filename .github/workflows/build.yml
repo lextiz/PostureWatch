@@ -1,0 +1,38 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Archive artifact
+        run: Compress-Archive -Path target/release/posturewatch.exe -DestinationPath PostureWatch-Windows-portable.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v0.1.0-b${{ github.run_number }}"
+          name: "Development Build ${{ github.run_number }}"
+          files: PostureWatch-Windows-portable.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
