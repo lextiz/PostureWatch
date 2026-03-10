@@ -19,3 +19,4 @@ nokhwa = { version = "0.10.4", features = ["input-native"] }
 winit = "0.28"
 tao = "0.16"
 notify-rust = "4.9"
+toml = "0.8"

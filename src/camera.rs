@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use nokhwa::{
     pixel_format::RgbFormat,
-    utils::{CameraFormat, FrameFormat, RequestedFormat, RequestedFormatType, Resolution},
+    utils::{RequestedFormat, RequestedFormatType},
     Camera,
 };
 

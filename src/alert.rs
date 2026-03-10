@@ -1,6 +1,5 @@
 use crate::config::Config;
 use notify_rust::Notification;
-use std::time::Duration;
 
 pub fn notify_bad_posture(config: &Config) {
     let _ = Notification::new()
@@ -15,7 +14,7 @@ pub fn notify_bad_posture(config: &Config) {
         .show();
 }
 
-pub fn notify_desk_raise(config: &Config) {
+pub fn notify_desk_raise(_config: &Config) {
     let _ = Notification::new()
         .summary("Posture Watch - Stand up!")
         .body("It's time to raise your desk or stretch your legs.")
