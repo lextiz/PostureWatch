@@ -27,20 +27,54 @@ impl CameraState {
         if let Some(cam) = &mut self.camera {
             let frame = cam.frame().context("Failed to capture frame")?;
             let buffer = frame.buffer();
+            let (w, h) = (frame.resolution().width(), frame.resolution().height());
 
-            // Encode to JPEG using image crate
-            let img = image::RgbImage::from_raw(
-                frame.resolution().width(),
-                frame.resolution().height(),
-                buffer.to_vec(),
-            )
-            .context("Failed to parse raw buffer as RGB image")?;
+            // Try to handle common pixel layouts robustly:
+            // - RGB (3 bytes/pixel)
+            // - RGBA (4 bytes/pixel)
+            // - BGR (3 bytes/pixel, channel order swapped)
+            // Fallback: return a helpful error with diagnostics.
 
-            let mut cursor = std::io::Cursor::new(Vec::new());
-            img.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(80))
-                .context("Failed to encode as JPEG")?;
+            // Helper to encode DynamicImage to JPEG bytes
+            fn encode_to_jpeg(img: image::DynamicImage) -> anyhow::Result<Vec<u8>> {
+                let mut cursor = std::io::Cursor::new(Vec::new());
+                img.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(80))
+                    .context("Failed to encode as JPEG")?;
+                Ok(cursor.into_inner())
+            }
 
-            return Ok(cursor.into_inner());
+            // 1) Exact RGB (3 bytes per pixel)
+            if buffer.len() == (w as usize) * (h as usize) * 3 {
+                if let Some(img) = image::RgbImage::from_raw(w, h, buffer.to_vec()) {
+                    return encode_to_jpeg(image::DynamicImage::ImageRgb8(img));
+                }
+                // If from_raw failed despite matching size, try BGR -> RGB swap
+                let mut swapped = buffer.to_vec();
+                for chunk in swapped.chunks_mut(3) {
+                    if chunk.len() == 3 {
+                        chunk.swap(0, 2);
+                    }
+                }
+                if let Some(img) = image::RgbImage::from_raw(w, h, swapped) {
+                    return encode_to_jpeg(image::DynamicImage::ImageRgb8(img));
+                }
+            }
+
+            // 2) RGBA (4 bytes per pixel) -> convert to RGB
+            if buffer.len() == (w as usize) * (h as usize) * 4 {
+                if let Some(rgba) = image::RgbaImage::from_raw(w, h, buffer.to_vec()) {
+                    let rgb = image::DynamicImage::ImageRgba8(rgba).to_rgb8();
+                    return encode_to_jpeg(image::DynamicImage::ImageRgb8(rgb));
+                }
+            }
+
+            // 3) Last resort: try to interpret buffer as an encoded image (jpeg/png) in-memory
+            if let Ok(img) = image::load_from_memory(buffer) {
+                return encode_to_jpeg(img);
+            }
+
+            // Diagnostic error to help debugging on unknown formats
+            anyhow::bail!("Failed to parse raw buffer as RGB image. resolution={}x{} buffer_len={}", w, h, buffer.len());
         }
 
         anyhow::bail!("Camera is not initialized")
