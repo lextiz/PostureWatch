@@ -74,7 +74,12 @@ impl CameraState {
             }
 
             // Diagnostic error to help debugging on unknown formats
-            anyhow::bail!("Failed to parse raw buffer as RGB image. resolution={}x{} buffer_len={}", w, h, buffer.len());
+            anyhow::bail!(
+                "Failed to parse raw buffer as RGB image. resolution={}x{} buffer_len={}",
+                w,
+                h,
+                buffer.len()
+            );
         }
 
         anyhow::bail!("Camera is not initialized")
