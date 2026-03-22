@@ -7,6 +7,7 @@ use serde_json::json;
 pub enum PostureStatus {
     Good,
     Bad,
+    NoPerson, // No human detected in frame
 }
 
 pub struct PostureAnalyzer {
@@ -28,10 +29,11 @@ impl PostureAnalyzer {
         }
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
-        // More specific prompt to get accurate results
-        let prompt = "You are a posture expert. Look at this image and analyze the person's sitting posture. 
-Consider: Is their back straight against the chair? Are shoulders level? Is head centered?
-Reply with ONLY one word: 'Good' if posture is acceptable, 'Bad' if they are slouching, leaning, or have poor posture.";
+        // Prompt that handles no-person cases
+        let prompt = "You are a posture expert. Look at this image and analyze what you see.
+- If you can see a person's face or upper body, analyze their sitting posture. Is their back straight? Are shoulders level? Reply with 'Good' if posture is acceptable, 'Bad' if they are slouching or have poor posture.
+- If you cannot see a clear human face or body in the frame (empty room, no person, camera pointed away, person too far, etc.), reply with ONLY 'NoPerson'.
+Reply with ONLY one word: 'Good', 'Bad', or 'NoPerson'.";
 
         let body = json!({
             "model": self.config.model,
@@ -80,6 +82,8 @@ Reply with ONLY one word: 'Good' if posture is acceptable, 'Bad' if they are slo
                 return Ok(PostureStatus::Good);
             } else if text.starts_with("bad") {
                 return Ok(PostureStatus::Bad);
+            } else if text.starts_with("noperson") {
+                return Ok(PostureStatus::NoPerson);
             }
             anyhow::bail!("Unexpected response: {}", content);
         }

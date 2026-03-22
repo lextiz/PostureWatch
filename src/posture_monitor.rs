@@ -33,6 +33,12 @@ impl MonitorLogic {
                     AlertEvent::None
                 }
             }
+            super::posture::PostureStatus::NoPerson => {
+                // No person detected - reset counter, no alerts
+                println!("No person detected in frame.");
+                self.consecutive_bad = 0;
+                AlertEvent::None
+            }
         }
     }
 }
@@ -80,6 +86,29 @@ mod tests {
         assert!(matches!(
             logic.process_status(PostureStatus::Good),
             AlertEvent::None
+        ));
+    }
+
+    #[test]
+    fn test_no_person_resets_counter() {
+        let mut logic = MonitorLogic::new();
+
+        // First bad - warning only
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::FirstWarning
+        ));
+
+        // NoPerson should reset counter and not trigger alert
+        assert!(matches!(
+            logic.process_status(PostureStatus::NoPerson),
+            AlertEvent::None
+        ));
+
+        // After NoPerson, next bad should be a warning again (counter reset)
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::FirstWarning
         ));
     }
 }
