@@ -36,6 +36,8 @@ async fn main() -> anyhow::Result<()> {
             last_desk_raise = Instant::now();
         }
 
+        println!("Capturing frame...");
+        
         let mut next_sleep = config.cycle_time_secs;
 
         // Capture frame

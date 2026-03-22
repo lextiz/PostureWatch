@@ -15,17 +15,34 @@ impl CameraState {
     }
 
     pub fn capture_frame(&mut self) -> Result<Vec<u8>> {
+        // Try to reuse camera, but if it fails, reinitialize
         if self.camera.is_none() {
-            let index = nokhwa::utils::CameraIndex::Index(0);
-            let requested =
-                RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
-            let mut cam = Camera::new(index, requested).context("Failed to initialize camera")?;
-            cam.open_stream().context("Failed to open camera stream")?;
-            self.camera = Some(cam);
+            match self.init_camera() {
+                Ok(cam) => self.camera = Some(cam),
+                Err(e) => {
+                    eprintln!("Camera init error: {:?}", e);
+                    // Wait a bit and retry
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    match self.init_camera() {
+                        Ok(cam) => self.camera = Some(cam),
+                        Err(e) => return Err(e).context("Failed to initialize camera after retry"),
+                    }
+                }
+            }
         }
 
         if let Some(cam) = &mut self.camera {
-            let frame = cam.frame().context("Failed to capture frame")?;
+            // Try to capture, if fails reinitialize
+            let frame_result = cam.frame();
+            
+            let frame = match frame_result {
+                Ok(f) => f,
+                Err(e) => {
+                    eprintln!("Camera frame capture error: {:?}, reinitializing...", e);
+                    self.camera = None;
+                    return self.capture_frame(); // Recursive retry
+                }
+            };
             let buffer = frame.buffer();
             let (w, h) = (frame.resolution().width(), frame.resolution().height());
 
@@ -83,5 +100,14 @@ impl CameraState {
         }
 
         anyhow::bail!("Camera is not initialized")
+    }
+    
+    fn init_camera(&self) -> Result<Camera> {
+        let index = nokhwa::utils::CameraIndex::Index(0);
+        let requested =
+            RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+        let mut cam = Camera::new(index, requested).context("Failed to create camera")?;
+        cam.open_stream().context("Failed to open camera stream")?;
+        Ok(cam)
     }
 }
