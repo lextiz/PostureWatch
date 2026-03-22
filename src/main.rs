@@ -34,6 +34,7 @@ async fn run_app() -> anyhow::Result<()> {
     let analyzer = PostureAnalyzer::new(config.clone().as_ref().clone());
 
     println!("PostureWatch active. Settings loaded.");
+    println!("Cycle time: {} seconds", config.cycle_time_secs);
     println!("Camera warming up...");
 
     // Warmup: capture a few frames first to let camera stabilize
@@ -59,6 +60,7 @@ async fn run_app() -> anyhow::Result<()> {
         }
 
         println!("Capturing frame...");
+        println!("  Cycle time setting: {}s", config.cycle_time_secs);
         
         let mut next_sleep = config.cycle_time_secs;
 
@@ -98,6 +100,7 @@ async fn run_app() -> anyhow::Result<()> {
         }
 
         sleep(Duration::from_secs(next_sleep)).await;
+        println!("Sleep complete ({}s), looping...", next_sleep);
     }
     
     Ok(())
