@@ -13,17 +13,17 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
 
-#[cfg(feature = "system-tray")]
+#[cfg(feature = "tray")]
 use tao::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, WindowEvent,
 };
 
-#[cfg(feature = "system-tray")]
+#[cfg(feature = "tray")]
 use std::sync::atomic::{AtomicBool, Ordering};
 
-#[cfg(feature = "system-tray")]
+#[cfg(feature = "tray")]
 static PAUSED: AtomicBool = AtomicBool::new(false);
 
 #[tokio::main]
@@ -42,12 +42,12 @@ async fn run_app() -> anyhow::Result<()> {
     
     let config = Arc::new(config);
     
-    #[cfg(feature = "system-tray")]
+    #[cfg(feature = "tray")]
     {
         run_with_tray(config).await?;
     }
     
-    #[cfg(not(feature = "system-tray"))]
+    #[cfg(not(feature = "tray"))]
     {
         run_console(config).await?;
     }
@@ -55,7 +55,7 @@ async fn run_app() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "system-tray")]
+#[cfg(feature = "tray")]
 async fn run_with_tray(config: Arc<Config>) -> anyhow::Result<()> {
     use tao::menu::{MenuBuilder, MenuItemBuilder};
     
@@ -113,7 +113,7 @@ async fn run_with_tray(config: Arc<Config>) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "system-tray")]
+#[cfg(feature = "tray")]
 async fn run_monitoring_loop(config: Arc<Config>, _handle: tao::AppHandle) {
     let mut camera_state = CameraState::new();
     let analyzer = PostureAnalyzer::new((*config).clone());
@@ -179,7 +179,7 @@ async fn run_monitoring_loop(config: Arc<Config>, _handle: tao::AppHandle) {
     }
 }
 
-#[cfg(not(feature = "system-tray"))]
+#[cfg(not(feature = "tray"))]
 async fn run_console(config: Arc<Config>) -> anyhow::Result<()> {
     let mut camera_state = CameraState::new();
     let analyzer = PostureAnalyzer::new((*config).clone());

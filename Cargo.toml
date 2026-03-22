@@ -17,7 +17,7 @@ image = "0.24"
 chrono = "0.4"
 nokhwa = { version = "0.10.4", features = ["input-native"] }
 winit = "0.28"
-tao = "0.16"
+tao = "0.28"
 toml = "0.8"
 
 [target.'cfg(windows)'.dependencies]
@@ -27,8 +27,8 @@ winrt-notification = "0.5"
 notify-rust = "4.9"
 
 [features]
-default = ["system-tray"]
-system-tray = ["tao/system-tray", "tao/menu"]
+default = ["tray"]
+tray = ["tao/tray"]
 
 [profile.release]
 strip = true
