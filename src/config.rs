@@ -21,7 +21,7 @@ impl Default for Config {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-4o-mini".to_string(),
             api_key: "".to_string(), // No hardcoded secrets!
-            cycle_time_secs: 300,    // 5 minutes
+            cycle_time_secs: 60,     // 1 minute
             alert_color: "red".to_string(),
             alert_duration_secs: 5,
             desk_raise_interval_secs: 3600, // 1 hour

@@ -18,5 +18,10 @@ chrono = "0.4"
 nokhwa = { version = "0.10.4", features = ["input-native"] }
 winit = "0.28"
 tao = "0.16"
-notify-rust = "4.9"
 toml = "0.8"
+
+[target.'cfg(windows)'.dependencies]
+winrt-notification = "0.5"
+
+[target.'cfg(not(windows))'.dependencies]
+notify-rust = "4.9"
