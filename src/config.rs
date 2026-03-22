@@ -21,7 +21,7 @@ impl Default for Config {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-4o-mini".to_string(),
             api_key: "".to_string(), // No hardcoded secrets!
-            cycle_time_secs: 60,     // 1 minute
+            cycle_time_secs: 10,    // 10 seconds
             alert_color: "red".to_string(),
             alert_duration_secs: 5,
             desk_raise_interval_secs: 3600, // 1 hour
@@ -32,21 +32,25 @@ impl Default for Config {
 impl Config {
     pub fn load() -> Self {
         if let Some(path) = Self::config_path() {
-            if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(mut config) = toml::from_str::<Config>(&content) {
-                    // Auto-migrate deprecated models
-                    if config.model == "gpt-4-vision-preview" {
-                        config.model = "gpt-4o-mini".to_string();
-                        let _ = config.save();
+            // Check if config file exists
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(mut config) = toml::from_str::<Config>(&content) {
+                        // Auto-migrate deprecated models
+                        if config.model == "gpt-4-vision-preview" {
+                            config.model = "gpt-4o-mini".to_string();
+                            let _ = config.save();
+                        }
+                        return config;
                     }
-                    return config;
                 }
             }
-            // Create default if not exists
-            let default = Config::default();
+            // Create config directory if needed
             if let Some(dir) = path.parent() {
                 let _ = fs::create_dir_all(dir);
             }
+            // Write default config
+            let default = Config::default();
             let _ = fs::write(path, toml::to_string(&default).unwrap_or_default());
             return default;
         }
@@ -54,8 +58,22 @@ impl Config {
     }
 
     fn config_path() -> Option<PathBuf> {
-        ProjectDirs::from("com", "posturewatch", "PostureWatch")
-            .map(|dirs| dirs.config_dir().join("config.toml"))
+        let possible_paths = vec![
+            // Standard: %APPDATA%/com/posturewatch/PostureWatch/config.toml
+            ProjectDirs::from("com", "posturewatch", "PostureWatch"),
+            // With dot: %APPDATA%/com.posturewatch/PostureWatch/config.toml
+            ProjectDirs::from("com.posturewatch", "PostureWatch", "PostureWatch"),
+            // User created: %APPDATA%/com.posturewatch/PostureWatch/
+            ProjectDirs::from("com", "posturewatch", "PostureWatch"),
+        ];
+        
+        for dirs in possible_paths.into_iter().flatten() {
+            let path = dirs.config_dir().join("config.toml");
+            // Return the user's path if it exists, otherwise use it as the default
+            return Some(path);
+        }
+        
+        None
     }
 
     pub fn save(&self) -> anyhow::Result<()> {

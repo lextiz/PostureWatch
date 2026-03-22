@@ -25,14 +25,6 @@ jobs:
       - name: Build
         run: cargo build --release
 
-      - name: Get commit info
-        id: commit
-        run: |
-          $msg = $env:COMMIT_MSG.Substring(0, [Math]::Min(50, $env:COMMIT_MSG.Length))
-          echo "MSG=$msg" >> $env:GITHUB_OUTPUT
-        env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-
       - name: Determine release version
         id: version
         run: |
@@ -46,8 +38,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ steps.version.outputs.VERSION }}"
-          name: "Development Build ${{ steps.version.outputs.VERSION }}"
-          body: "Auto-generated release from commit: ${{ steps.commit.outputs.MSG }}"
+          body: "Auto-generated release from push to main"
           files: PostureWatch-Windows-portable.zip
           draft: false
         env:
