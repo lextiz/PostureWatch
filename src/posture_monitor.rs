@@ -5,20 +5,53 @@ pub enum AlertEvent {
     PostureImproved,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum Strictness {
+    Low,      // Require 3 bad before alert
+    Medium,   // Require 2 bad before alert  
+    High,     // Alert on first bad (1)
+}
+
+impl Strictness {
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "low" => Strictness::Low,
+            "high" => Strictness::High,
+            _ => Strictness::Medium,
+        }
+    }
+    
+    pub fn threshold(&self) -> u32 {
+        match self {
+            Strictness::Low => 3,
+            Strictness::Medium => 2,
+            Strictness::High => 1,
+        }
+    }
+}
+
 pub struct MonitorLogic {
     pub consecutive_bad: u32,
+    strictness: Strictness,
 }
 
 impl MonitorLogic {
-    pub fn new() -> Self {
-        Self { consecutive_bad: 0 }
+    pub fn new(strictness: Strictness) -> Self {
+        Self { 
+            consecutive_bad: 0,
+            strictness,
+        }
+    }
+    
+    pub fn set_strictness(&mut self, strictness: Strictness) {
+        self.strictness = strictness;
     }
 
     pub fn process_status(&mut self, status: super::posture::PostureStatus) -> AlertEvent {
         match status {
             super::posture::PostureStatus::Bad => {
                 self.consecutive_bad += 1;
-                if self.consecutive_bad >= 2 {
+                if self.consecutive_bad >= self.strictness.threshold() {
                     AlertEvent::NotifyBadPosture
                 } else {
                     AlertEvent::FirstWarning
@@ -49,8 +82,8 @@ mod tests {
     use crate::posture::PostureStatus;
 
     #[test]
-    fn test_alert_repeat_behavior() {
-        let mut logic = MonitorLogic::new();
+    fn test_alert_repeat_behavior_medium() {
+        let mut logic = MonitorLogic::new(Strictness::Medium);
 
         // Initial good
         assert!(matches!(
@@ -69,29 +102,45 @@ mod tests {
             logic.process_status(PostureStatus::Bad),
             AlertEvent::NotifyBadPosture
         ));
+    }
 
-        // Third bad - notify again (repeat until improves)
+    #[test]
+    fn test_alert_repeat_behavior_high() {
+        let mut logic = MonitorLogic::new(Strictness::High);
+
+        // First bad - notify immediately
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::NotifyBadPosture
         ));
+    }
 
-        // Improves
+    #[test]
+    fn test_alert_repeat_behavior_low() {
+        let mut logic = MonitorLogic::new(Strictness::Low);
+
+        // First bad - warning
         assert!(matches!(
-            logic.process_status(PostureStatus::Good),
-            AlertEvent::PostureImproved
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::FirstWarning
         ));
 
-        // Good again
+        // Second bad - warning  
         assert!(matches!(
-            logic.process_status(PostureStatus::Good),
-            AlertEvent::None
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::FirstWarning
+        ));
+
+        // Third bad - notify
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::NotifyBadPosture
         ));
     }
 
     #[test]
     fn test_no_person_resets_counter() {
-        let mut logic = MonitorLogic::new();
+        let mut logic = MonitorLogic::new(Strictness::Medium);
 
         // First bad - warning only
         assert!(matches!(

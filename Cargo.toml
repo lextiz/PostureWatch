@@ -25,3 +25,12 @@ winrt-notification = "0.5"
 
 [target.'cfg(not(windows))'.dependencies]
 notify-rust = "4.9"
+
+[features]
+default = ["system-tray"]
+system-tray = ["tao/system-tray", "tao/menu"]
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

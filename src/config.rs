@@ -1,8 +1,30 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{self, Write};
 use std::path::PathBuf;
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum Strictness {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for Strictness {
+    fn default() -> Self {
+        Strictness::Medium
+    }
+}
+
+impl std::fmt::Display for Strictness {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Strictness::Low => write!(f, "Low"),
+            Strictness::Medium => write!(f, "Medium"),
+            Strictness::High => write!(f, "High"),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -13,6 +35,7 @@ pub struct Config {
     pub alert_color: String,
     pub alert_duration_secs: u64,
     pub desk_raise_interval_secs: u64,
+    pub strictness: String,
 }
 
 impl Default for Config {
@@ -25,6 +48,7 @@ impl Default for Config {
             alert_color: "red".to_string(),
             alert_duration_secs: 5,
             desk_raise_interval_secs: 3600, // 1 hour
+            strictness: "Medium".to_string(),
         }
     }
 }
