@@ -28,7 +28,10 @@ impl PostureAnalyzer {
         }
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
-        let prompt = "Analyze the posture of the person in this image. Is their back straight and shoulders relaxed? Answer strictly 'Good' or 'Bad'.";
+        // More specific prompt to get accurate results
+        let prompt = "You are a posture expert. Look at this image and analyze the person's sitting posture. 
+Consider: Is their back straight against the chair? Are shoulders level? Is head centered?
+Reply with ONLY one word: 'Good' if posture is acceptable, 'Bad' if they are slouching, leaning, or have poor posture.";
 
         let body = json!({
             "model": self.config.model,
@@ -68,13 +71,17 @@ impl PostureAnalyzer {
         }
 
         let json = resp.json::<serde_json::Value>().await?;
+        
+        // Debug: print the response
         if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
-            let text = content.to_lowercase();
-            if text.contains("good") {
+            println!("API Response: {}", content);
+            let text = content.to_lowercase().trim().to_string();
+            if text.starts_with("good") {
                 return Ok(PostureStatus::Good);
-            } else if text.contains("bad") {
+            } else if text.starts_with("bad") {
                 return Ok(PostureStatus::Bad);
             }
+            anyhow::bail!("Unexpected response: {}", content);
         }
 
         anyhow::bail!("Could not parse API response");

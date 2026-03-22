@@ -61,6 +61,8 @@ async fn main() -> anyhow::Result<()> {
                     }
                     Err(e) => {
                         eprintln!("Analysis error: {:?}", e);
+                        // Reset the monitor state on error to avoid spurious notifications
+                        monitor = MonitorLogic::new();
                     }
                 }
             }
