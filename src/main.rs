@@ -15,14 +15,16 @@ use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = Arc::new(Config::load());
+    let mut config = Config::load();
+    
+    // Prompt for API key if not set
+    config.prompt_for_api_key();
+    
+    let config = Arc::new(config);
     let mut camera_state = CameraState::new();
     let analyzer = PostureAnalyzer::new(config.clone().as_ref().clone());
 
     println!("PostureWatch active. Settings loaded.");
-    if config.privacy_mode {
-        println!("Privacy mode ON: Images are analyzed locally when possible.");
-    }
 
     let mut last_desk_raise = Instant::now();
     let mut monitor = MonitorLogic::new();
@@ -53,9 +55,6 @@ async fn main() -> anyhow::Result<()> {
                             }
                             AlertEvent::PostureImproved => {
                                 println!("Posture improved. Good job!");
-                            }
-                            AlertEvent::Unknown => {
-                                println!("Fallback or unknown status. Please ensure good posture manually.");
                             }
                             AlertEvent::None => {}
                         }

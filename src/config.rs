@@ -1,6 +1,7 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -8,7 +9,6 @@ pub struct Config {
     pub provider_endpoint: String,
     pub model: String,
     pub api_key: String,
-    pub privacy_mode: bool,
     pub cycle_time_secs: u64,
     pub alert_color: String,
     pub alert_duration_secs: u64,
@@ -21,7 +21,6 @@ impl Default for Config {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-4-vision-preview".to_string(),
             api_key: "".to_string(), // No hardcoded secrets!
-            privacy_mode: true,      // true means send only minimal data or use local fallback
             cycle_time_secs: 300,    // 5 minutes
             alert_color: "red".to_string(),
             alert_duration_secs: 5,
@@ -52,5 +51,38 @@ impl Config {
     fn config_path() -> Option<PathBuf> {
         ProjectDirs::from("com", "posturewatch", "PostureWatch")
             .map(|dirs| dirs.config_dir().join("config.toml"))
+    }
+
+    pub fn save(&self) -> anyhow::Result<()> {
+        if let Some(path) = Self::config_path() {
+            if let Some(dir) = path.parent() {
+                fs::create_dir_all(dir)?;
+            }
+            fs::write(path, toml::to_string(self)?)?;
+        }
+        Ok(())
+    }
+
+    pub fn prompt_for_api_key(&mut self) {
+        if self.api_key.is_empty() {
+            println!("\n=================================================");
+            println!("  Welcome to PostureWatch!");
+            println!("=================================================");
+            println!("To analyze your posture, PostureWatch needs an API key.");
+            println!("You can get a free API key from OpenAI or other providers.");
+            print!("Please enter your API key: ");
+            
+            io::stdout().flush().unwrap();
+            let mut api_key = String::new();
+            if io::stdin().read_line(&mut api_key).is_ok() {
+                self.api_key = api_key.trim().to_string();
+                if !self.api_key.is_empty() {
+                    println!("\nAPI key saved successfully!");
+                    if let Err(e) = self.save() {
+                        eprintln!("Warning: Could not save config: {}", e);
+                    }
+                }
+            }
+        }
     }
 }

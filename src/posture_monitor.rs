@@ -3,7 +3,6 @@ pub enum AlertEvent {
     FirstWarning,
     NotifyBadPosture,
     PostureImproved,
-    Unknown,
 }
 
 pub struct MonitorLogic {
@@ -34,7 +33,6 @@ impl MonitorLogic {
                     AlertEvent::None
                 }
             }
-            super::posture::PostureStatus::Unknown => AlertEvent::Unknown,
         }
     }
 }
