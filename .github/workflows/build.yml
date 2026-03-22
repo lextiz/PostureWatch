@@ -25,14 +25,30 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: Get commit info
+        id: commit
+        run: |
+          $msg = $env:COMMIT_MSG.Substring(0, [Math]::Min(50, $env:COMMIT_MSG.Length))
+          echo "MSG=$msg" >> $env:GITHUB_OUTPUT
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+
+      - name: Determine release version
+        id: version
+        run: |
+          $run = $env:GITHUB_RUN_NUMBER
+          echo "VERSION=v0.1.0-b$run" >> $env:GITHUB_OUTPUT
+
       - name: Archive artifact
         run: Compress-Archive -Path target/release/posturewatch.exe -DestinationPath PostureWatch-Windows-portable.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v0.1.0-b${{ github.run_number }}"
-          name: "Development Build ${{ github.run_number }}"
+          tag_name: "${{ steps.version.outputs.VERSION }}"
+          name: "Development Build ${{ steps.version.outputs.VERSION }}"
+          body: "Auto-generated release from commit: ${{ steps.commit.outputs.MSG }}"
           files: PostureWatch-Windows-portable.zip
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
