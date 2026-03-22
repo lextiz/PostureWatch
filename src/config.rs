@@ -1,6 +1,7 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
