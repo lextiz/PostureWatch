@@ -19,7 +19,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
-            model: "gpt-4-vision-preview".to_string(),
+            model: "gpt-4o-mini".to_string(),
             api_key: "".to_string(), // No hardcoded secrets!
             cycle_time_secs: 300,    // 5 minutes
             alert_color: "red".to_string(),
@@ -33,7 +33,12 @@ impl Config {
     pub fn load() -> Self {
         if let Some(path) = Self::config_path() {
             if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(config) = toml::from_str(&content) {
+                if let Ok(mut config) = toml::from_str::<Config>(&content) {
+                    // Auto-migrate deprecated models
+                    if config.model == "gpt-4-vision-preview" {
+                        config.model = "gpt-4o-mini".to_string();
+                        let _ = config.save();
+                    }
                     return config;
                 }
             }
