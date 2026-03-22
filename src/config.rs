@@ -58,22 +58,27 @@ impl Config {
     }
 
     fn config_path() -> Option<PathBuf> {
-        let possible_paths = vec![
-            // Standard: %APPDATA%/com/posturewatch/PostureWatch/config.toml
-            ProjectDirs::from("com", "posturewatch", "PostureWatch"),
-            // With dot: %APPDATA%/com.posturewatch/PostureWatch/config.toml
-            ProjectDirs::from("com.posturewatch", "PostureWatch", "PostureWatch"),
-            // User created: %APPDATA%/com.posturewatch/PostureWatch/
-            ProjectDirs::from("com", "posturewatch", "PostureWatch"),
-        ];
+        // Try user's existing path first: C:\Users\...\AppData\Roaming\com.posturewatch\PostureWatch\config.toml
+        let user_path = std::env::var("APPDATA")
+            .ok()
+            .map(|appdata| std::path::PathBuf::from(appdata).join("com.posturewatch").join("PostureWatch").join("config.toml"));
         
-        for dirs in possible_paths.into_iter().flatten() {
-            let path = dirs.config_dir().join("config.toml");
-            // Return the user's path if it exists, otherwise use it as the default
-            return Some(path);
+        if let Some(ref path) = user_path {
+            if path.exists() {
+                println!("Config: using existing user path: {:?}", path);
+                return user_path;
+            }
         }
         
-        None
+        // Standard path: C:\Users\...\AppData\Roaming\com\posturewatch\PostureWatch\config.toml
+        let standard = ProjectDirs::from("com", "posturewatch", "PostureWatch")
+            .map(|dirs| {
+                let path = dirs.config_dir().join("config.toml");
+                println!("Config: using standard path: {:?}", path);
+                path
+            });
+        
+        standard
     }
 
     pub fn save(&self) -> anyhow::Result<()> {
