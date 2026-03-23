@@ -109,11 +109,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Create release and upload asset using gh CLI
-          echo "GITHUB_TOKEN set: $([ -n '$GITHUB_TOKEN' ] && echo 'yes' || echo 'no')"
-          gh auth status || true
-          gh release create "${{ github.ref_name }}" \
-            --title "Release ${{ github.ref_name }}" \
-            --notes "PostureWatch release" \
-            ./PostureWatch-Windows.zip || echo "Release may already exist, trying to upload..."
-          gh release upload "${{ github.ref_name }}" ./PostureWatch-Windows.zip --clobber
+          # Get the tag name without "refs/tags/"
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          echo "Tag: $TAG_NAME"
+          
+          # Create the release via API
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d "{\"tag_name\":\"$TAG_NAME\",\"name\":\"Release $TAG_NAME\",\"draft\":false}")
+          
+          echo "Create response: $RESPONSE"
+          
+          # Extract upload URL - handle both cases (new or existing release)
+          UPLOAD_URL=$(echo "$RESPONSE" | grep -o '"upload_url":"[^"]*' | sed 's/"upload_url":"//' | sed 's/{?name,label}//')
+          echo "Upload URL: $UPLOAD_URL"
+          
+          # Upload the asset
+          curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/zip" \
+            "${UPLOAD_URL}?name=PostureWatch-Windows.zip" \
+            --data-binary @PostureWatch-Windows.zip
+          
+          echo "Release created and asset uploaded successfully"
