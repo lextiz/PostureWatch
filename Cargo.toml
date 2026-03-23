@@ -18,15 +18,9 @@ chrono = "0.4"
 nokhwa = { version = "0.10.4", features = ["input-native"] }
 toml = "0.8"
 
-# System tray and window
-tao = "0.28"
-tray-icon = "0.14"
-
-# GUI framework
-iced = { version = "0.13", features = ["gdk", "portable"] }
-
-# Async runtime for GUI
-flume = "0.11"
+# Logging
+log = "0.4"
+env_logger = "0.11"
 
 [target.'cfg(windows)'.dependencies]
 winrt-notification = "0.5"
