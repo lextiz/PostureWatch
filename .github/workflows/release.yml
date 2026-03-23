@@ -15,6 +15,11 @@ jobs:
           echo "Ref: ${{ github.ref }}"
           echo "Event: ${{ github.event_name }}"
           echo "SHA: ${{ github.sha }}"
+          echo "GITHUB_TOKEN present: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "GITHUB_TOKEN first chars: ${{ secrets.GITHUB_TOKEN }}"
+          whoami
+          which gh
+          gh --version
 
       - name: Checkout
         uses: actions/checkout@v4
