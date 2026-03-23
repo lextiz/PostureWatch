@@ -1,4 +1,4 @@
-name: Token Test
+name: Checkout Test
 
 on:
   workflow_dispatch:
@@ -7,9 +7,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Check token
-        run: |
-          echo "Token present: ${{ secrets.GITHUB_TOKEN != '' }}"
-          echo "Token first 10 chars: ${{ secrets.GITHUB_TOKEN }}"
-      - name: Check job
-        run: echo "Job executed"
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          echo "Checkout done"
+          pwd
+          ls -la
