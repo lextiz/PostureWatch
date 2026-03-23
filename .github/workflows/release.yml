@@ -30,7 +30,8 @@ jobs:
 
       - name: Package for Windows
         run: |
-          mkdir release
+          if (Test-Path release) { Remove-Item release -Recurse -Force }
+          New-Item -ItemType Directory -Path release
           copy target\release\posturewatch.exe release\
           echo @echo off > release\install.bat
           echo echo PostureWatch Installer >> release\install.bat
