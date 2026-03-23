@@ -9,18 +9,17 @@
 ## Code Quality
 
 ### Before Pushing
-**Always run the following commands before pushing code:**
+**Always run the following commands locally before pushing to ensure all CI checks pass:**
 
 ```bash
-# Format code
+# Run all local checks
 cargo fmt -- --write
-
-# Run clippy linter with autofix recommendations
 cargo clippy -- -D warnings
-
-# Run tests
 cargo test
+cargo build
 ```
+
+If any command fails, fix the issues and re-run until all pass. You can make multiple local commits for readability, but ensure the final push contains only passing checks.
 
 ### CI Checks
 The CI pipeline runs these jobs in parallel:
