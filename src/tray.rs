@@ -73,8 +73,8 @@ impl TrayManager {
                 } else if request.starts_with("POST /set_strictness") {
                     // Parse the strictness from request
                     if let Some(pos) = request.find("strictness=") {
-                        let strictness = &request[pos + 11..].split_whitespace().next().unwrap_or("Medium");
-                        let strictness = match strictness {
+                        let strictness_raw = &request[pos + 11..].split_whitespace().next().unwrap_or("Medium");
+                        let strictness = match *strictness_raw {
                             "Low" => "Low",
                             "High" => "High", 
                             _ => "Medium",
