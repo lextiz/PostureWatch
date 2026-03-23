@@ -114,7 +114,7 @@ jobs:
           
           echo "Existing release: $EXISTING"
           
-          RELEASE_ID=$(echo "$EXISTING" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("id",""))')
+          RELEASE_ID=$(echo "$EXISTING" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read()).get("id","") or "")')
           
           if [ -z "$RELEASE_ID" ]; then
             # Release doesn't exist, create it
@@ -128,7 +128,7 @@ jobs:
                 "draft": false
               }')
             echo "Created release: $RELEASE_DATA"
-            RELEASE_ID=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
+            RELEASE_ID=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read()).get("id","") or "")')
           fi
           
           echo "Release ID: $RELEASE_ID"
@@ -136,7 +136,7 @@ jobs:
           # Get upload URL from the release
           UPLOAD_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" | \
-            python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url","").replace("{?name,label}",""))')
+            python3 -c 'import json,sys; print((json.loads(sys.stdin.read()).get("upload_url","") or "").replace("{?name,label}",""))')
           
           echo "Upload URL: $UPLOAD_URL"
           
