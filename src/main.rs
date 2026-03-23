@@ -83,16 +83,16 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
     
     // Initial config
     {
-        let state = state.lock().await;
-        println!("Cycle time: {} seconds", state.config.cycle_time_secs);
-        println!("Strictness: {}", state.config.strictness);
+        let guard = state.lock().await;
+        println!("Cycle time: {} seconds", guard.config.cycle_time_secs);
+        println!("Strictness: {}", guard.config.strictness);
     }
 
     loop {
         // Check if paused
         let should_skip = {
-            let state = state.lock().await;
-            if state.is_paused {
+            let guard = state.lock().await;
+            if guard.is_paused {
                 println!("Paused - waiting...");
                 true
             } else {
@@ -108,19 +108,20 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
         // Check desk raise interval
         let mut should_notify_desk = false;
         {
-            let state = state.lock().await;
-            if state.last_desk_raise.elapsed().as_secs() >= state.config.desk_raise_interval_secs {
+            let guard = state.lock().await;
+            if guard.last_desk_raise.elapsed().as_secs() >= guard.config.desk_raise_interval_secs {
                 should_notify_desk = true;
             }
         }
 
         if should_notify_desk {
-            let state = state.lock().await;
-            alert::notify_desk_raise(&state.config);
-            drop(state);
+            {
+                let guard = state.lock().await;
+                alert::notify_desk_raise(&guard.config);
+            }
             
-            let mut state = state.lock().await;
-            state.last_desk_raise = Instant::now();
+            let mut guard = state.lock().await;
+            guard.last_desk_raise = Instant::now();
         }
 
         // Capture and analyze
@@ -128,17 +129,18 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
         let mut status_opt = None;
         
         {
-            let state = state.lock().await;
-            match state.camera_state.lock().await.capture_frame() {
+            let guard = state.lock().await;
+            let camera_guard = guard.camera_state.lock().await;
+            match camera_guard.capture_frame() {
                 Ok(frame) => {
-                    match state.analyzer.analyze(&frame).await {
+                    match guard.analyzer.analyze(&frame).await {
                         Ok(status) => {
                             status_opt = Some(status);
                         }
                         Err(e) => {
                             eprintln!("Analysis error: {:?}", e);
-                            let mut monitor = state.monitor.lock().await;
-                            *monitor = MonitorLogic::new(Strictness::from_str(&state.config.strictness));
+                            let mut monitor = guard.monitor.lock().await;
+                            *monitor = MonitorLogic::new(Strictness::from_str(&guard.config.strictness));
                         }
                     }
                 }
@@ -150,12 +152,12 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
         }
 
         if let Some(status) = status_opt {
-            let state = state.lock().await;
-            let mut monitor = state.monitor.lock().await;
+            let guard = state.lock().await;
+            let mut monitor = guard.monitor.lock().await;
             
             match monitor.process_status(status) {
                 AlertEvent::NotifyBadPosture => {
-                    alert::notify_bad_posture(&state.config);
+                    alert::notify_bad_posture(&guard.config);
                     next_sleep = 10;
                 }
                 AlertEvent::FirstWarning => {
@@ -171,8 +173,8 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
 
         // Get cycle time from config
         {
-            let state = state.lock().await;
-            next_sleep = state.config.cycle_time_secs;
+            let guard = state.lock().await;
+            next_sleep = guard.config.cycle_time_secs;
         }
 
         sleep(Duration::from_secs(next_sleep)).await;
