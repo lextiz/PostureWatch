@@ -34,25 +34,37 @@ jobs:
         run: |
           mkdir -p release
           cp target/x86_64-pc-windows-gnu/release/posturewatch.exe release/ 2>/dev/null || cp target/x86_64-pc-windows-gnu/release/PostureWatch.exe release/ 2>/dev/null
+          ls -la release/
           echo '@echo off' > release/install.bat
           echo 'echo PostureWatch Installer' >> release/install.bat
           echo 'echo Please run posturewatch.exe to start' >> release/install.bat
           echo 'pause' >> release/install.bat
           zip -r PostureWatch-Windows.zip release/
+          ls -la PostureWatch-Windows.zip
 
-      - name: Create Release
+      - name: Create Release and Upload
         run: |
           TAG_NAME=${{ github.ref_name }}
-          RELEASE_ID=$(curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          echo "Creating release for tag: ${TAG_NAME}"
+          
+          # Create release via API
+          RESPONSE=$(curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/lextiz/PostureWatch/releases" \
-            -d "{\"tag_name\":\"${TAG_NAME}\",\"name\":\"Release ${TAG_NAME}\",\"body\":\"PostureWatch Windows release\"}" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
+            -d "{\"tag_name\":\"${TAG_NAME}\",\"name\":\"Release ${TAG_NAME}\",\"body\":\"PostureWatch Windows release\"}")
+          echo "Response: ${RESPONSE}"
+          
+          RELEASE_ID=$(echo "${RESPONSE}" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
           echo "Release ID: ${RELEASE_ID}"
-          echo "RELEASE_ID=${RELEASE_ID}" >> $GITHUB_ENV
-
-      - name: Upload Asset
-        run: |
-          curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          
+          if [ -z "${RELEASE_ID}" ]; then
+            echo "Failed to create release"
+            exit 1
+          fi
+          
+          # Upload asset
+          echo "Uploading asset..."
+          curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Content-Type: application/zip" \
             "https://uploads.github.com/repos/lextiz/PostureWatch/releases/${RELEASE_ID}/assets?name=PostureWatch-Windows.zip" \
