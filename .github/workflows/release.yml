@@ -67,6 +67,16 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          else
+            TAG_NAME="v0.9.4"
+          fi
           echo "Creating release for tag: $TAG_NAME"
-          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "PostureWatch release" ./PostureWatch-Windows.zip
+          # Check if release already exists
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "Release $TAG_NAME already exists, uploading asset..."
+            gh release upload "$TAG_NAME" ./PostureWatch-Windows.zip --force
+          else
+            gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "PostureWatch release" ./PostureWatch-Windows.zip
+          fi
