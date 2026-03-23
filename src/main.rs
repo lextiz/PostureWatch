@@ -34,7 +34,7 @@ async fn main() {
     println!("Strictness: {}", config.strictness);
 
     // Setup system tray (on Windows) or web UI (on other platforms)
-    tray::TrayManager::new().setup_tray(config_arc.clone());
+    tray::TrayManager::setup_tray(config_arc.clone());
 
     loop {
         // Check desk raise interval
