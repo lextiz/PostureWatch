@@ -32,14 +32,14 @@ impl PostureAnalyzer {
         }
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
-        
+
         // Strictness-aware prompt
         let strictness_guidance = match self.strictness {
             Strictness::High => "Be very strict. Even minor slouching, rounded shoulders, or leaning to one side is Bad.",
             Strictness::Medium => "Be moderately strict. Clear slouching, hunched back, or significantly uneven shoulders is Bad. Minor posture variations are acceptable.",
             Strictness::Low => "Be lenient. Only flag truly poor posture - severe slouching, chin on chest, or extreme forward lean. Slight imperfections are OK.",
         };
-        
+
         let prompt = format!("You are a posture expert. Your task is to analyze the person's sitting posture.
 
 Guidelines:
@@ -86,7 +86,7 @@ Output: Reply with ONLY one word: 'Good', 'Bad', or 'NoPerson'.", strictness_gui
         }
 
         let json = resp.json::<serde_json::Value>().await?;
-        
+
         // Debug: print the response
         if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
             println!("API Response: {}", content);

@@ -7,9 +7,9 @@ pub enum AlertEvent {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Strictness {
-    Low,      // Require 3 bad before alert
-    Medium,   // Require 2 bad before alert  
-    High,     // Alert on first bad (1)
+    Low,    // Require 3 bad before alert
+    Medium, // Require 2 bad before alert
+    High,   // Alert on first bad (1)
 }
 
 impl Strictness {
@@ -20,7 +20,7 @@ impl Strictness {
             _ => Strictness::Medium,
         }
     }
-    
+
     pub fn threshold(&self) -> u32 {
         match self {
             Strictness::Low => 3,
@@ -37,12 +37,12 @@ pub struct MonitorLogic {
 
 impl MonitorLogic {
     pub fn new(strictness: Strictness) -> Self {
-        Self { 
+        Self {
             consecutive_bad: 0,
             strictness,
         }
     }
-    
+
     pub fn set_strictness(&mut self, strictness: Strictness) {
         self.strictness = strictness;
     }

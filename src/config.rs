@@ -45,7 +45,7 @@ impl Default for Config {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-4o-mini".to_string(),
             api_key: "".to_string(), // No hardcoded secrets!
-            cycle_time_secs: 10,    // 10 seconds
+            cycle_time_secs: 10,     // 10 seconds
             alert_color: "red".to_string(),
             alert_duration_secs: 5,
             desk_raise_interval_secs: 3600, // 1 hour
@@ -84,25 +84,27 @@ impl Config {
 
     fn config_path() -> Option<PathBuf> {
         // Try user's existing path first: C:\Users\...\AppData\Roaming\com.posturewatch\PostureWatch\config.toml
-        let user_path = std::env::var("APPDATA")
-            .ok()
-            .map(|appdata| std::path::PathBuf::from(appdata).join("com.posturewatch").join("PostureWatch").join("config.toml"));
-        
+        let user_path = std::env::var("APPDATA").ok().map(|appdata| {
+            std::path::PathBuf::from(appdata)
+                .join("com.posturewatch")
+                .join("PostureWatch")
+                .join("config.toml")
+        });
+
         if let Some(ref path) = user_path {
             if path.exists() {
                 println!("Config: using existing user path: {:?}", path);
                 return user_path;
             }
         }
-        
+
         // Standard path: C:\Users\...\AppData\Roaming\com\posturewatch\PostureWatch\config.toml
-        let standard = ProjectDirs::from("com", "posturewatch", "PostureWatch")
-            .map(|dirs| {
-                let path = dirs.config_dir().join("config.toml");
-                println!("Config: using standard path: {:?}", path);
-                path
-            });
-        
+        let standard = ProjectDirs::from("com", "posturewatch", "PostureWatch").map(|dirs| {
+            let path = dirs.config_dir().join("config.toml");
+            println!("Config: using standard path: {:?}", path);
+            path
+        });
+
         standard
     }
 
@@ -129,7 +131,7 @@ impl Config {
             println!("To analyze your posture, PostureWatch needs an API key.");
             println!("You can get a free API key from OpenAI or other providers.");
             print!("Please enter your API key: ");
-            
+
             io::stdout().flush().unwrap();
             let mut api_key = String::new();
             if io::stdin().read_line(&mut api_key).is_ok() {

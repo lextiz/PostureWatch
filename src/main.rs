@@ -1,9 +1,9 @@
 mod alert;
 mod camera;
 mod config;
+mod gui;
 mod posture;
 mod posture_monitor;
-mod gui;
 
 use config::Config;
 use posture::PostureAnalyzer;
@@ -28,9 +28,9 @@ impl AppState {
     pub fn new() -> Self {
         let mut config = Config::load();
         config.prompt_for_api_key();
-        
+
         let strictness = Strictness::from_str(&config.strictness);
-        
+
         Self {
             config,
             camera_state: TokioMutex::new(camera::CameraState::new()),
@@ -61,10 +61,10 @@ impl AppState {
 async fn main() {
     // Initialize GUI (system tray, etc.)
     gui::init_system_tray();
-    
+
     // Run app in background thread
     let app_state = Arc::new(TokioMutex::new(AppState::new()));
-    
+
     // Spawn the monitoring task
     let state_clone = app_state.clone();
     tokio::spawn(async move {
@@ -80,7 +80,7 @@ async fn main() {
 async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
     println!("PostureWatch started in background mode");
     println!("Configure via tray icon or config file");
-    
+
     // Initial config
     {
         let guard = state.lock().await;
@@ -119,7 +119,7 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
                 let guard = state.lock().await;
                 alert::notify_desk_raise(&guard.config);
             }
-            
+
             let mut guard = state.lock().await;
             guard.last_desk_raise = Instant::now();
         }
@@ -127,23 +127,22 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
         // Capture and analyze
         let mut next_sleep = 10;
         let mut status_opt = None;
-        
+
         {
             let guard = state.lock().await;
             let camera_guard = guard.camera_state.lock().await;
             match camera_guard.capture_frame() {
-                Ok(frame) => {
-                    match guard.analyzer.analyze(&frame).await {
-                        Ok(status) => {
-                            status_opt = Some(status);
-                        }
-                        Err(e) => {
-                            eprintln!("Analysis error: {:?}", e);
-                            let mut monitor = guard.monitor.lock().await;
-                            *monitor = MonitorLogic::new(Strictness::from_str(&guard.config.strictness));
-                        }
+                Ok(frame) => match guard.analyzer.analyze(&frame).await {
+                    Ok(status) => {
+                        status_opt = Some(status);
                     }
-                }
+                    Err(e) => {
+                        eprintln!("Analysis error: {:?}", e);
+                        let mut monitor = guard.monitor.lock().await;
+                        *monitor =
+                            MonitorLogic::new(Strictness::from_str(&guard.config.strictness));
+                    }
+                },
                 Err(e) => {
                     eprintln!("Camera error: {:?}", e);
                     next_sleep = 10;
@@ -154,7 +153,7 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
         if let Some(status) = status_opt {
             let guard = state.lock().await;
             let mut monitor = guard.monitor.lock().await;
-            
+
             match monitor.process_status(status) {
                 AlertEvent::NotifyBadPosture => {
                     alert::notify_bad_posture(&guard.config);

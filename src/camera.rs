@@ -34,7 +34,7 @@ impl CameraState {
         if let Some(cam) = &mut self.camera {
             // Try to capture, if fails reinitialize
             let frame_result = cam.frame();
-            
+
             let frame = match frame_result {
                 Ok(f) => f,
                 Err(e) => {
@@ -101,7 +101,7 @@ impl CameraState {
 
         anyhow::bail!("Camera is not initialized")
     }
-    
+
     fn init_camera(&self) -> Result<Camera> {
         let index = nokhwa::utils::CameraIndex::Index(0);
         let requested =

@@ -5,7 +5,10 @@ pub fn notify_bad_posture(config: &Config) {
     use winrt_notification::{Duration, Sound, Toast};
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
         .title("Posture Watch")
-        .text1(&format!("Please sit up straight! Alert level: {}", config.alert_color))
+        .text1(&format!(
+            "Please sit up straight! Alert level: {}",
+            config.alert_color
+        ))
         .sound(Some(Sound::Default))
         .duration(Duration::Short)
         .show();
@@ -28,7 +31,7 @@ pub fn notify_bad_posture(config: &Config) {
 
 #[cfg(windows)]
 pub fn notify_desk_raise(_config: &Config) {
-    use winrt_notification::{Toast, Duration, Sound};
+    use winrt_notification::{Duration, Sound, Toast};
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
         .title("Posture Watch - Stand up!")
         .text1("It's time to raise your desk or stretch your legs.")

@@ -1,5 +1,5 @@
 //! GUI module for system tray and window management
-//! 
+//!
 //! Provides:
 //! - System tray icon with menu (Exit, Pause, Settings)
 //! - Settings dialog for configuration
