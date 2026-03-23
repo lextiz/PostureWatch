@@ -40,13 +40,6 @@ jobs:
           powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
           dir PostureWatch-Windows.zip
 
-      - name: Configure gh CLI
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "$env:GH_TOKEN" | gh auth login --with-token
-          gh auth status
-
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,18 +47,36 @@ jobs:
           if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/*") {
             $tag = "${{ github.ref }}".Replace("refs/tags/", "")
           } else {
-            $tag = "v0.9.6"
+            $tag = "v0.9.7"
           }
           Write-Host "Creating release for tag: $tag"
-          $existing = gh release view $tag 2>$null
-          if ($existing) {
-            Write-Host "Release $tag exists, uploading..."
-            gh release upload $tag ./PostureWatch-Windows.zip --force
-          } else {
-            gh release create $tag --title "Release $tag" --notes "PostureWatch release" ./PostureWatch-Windows.zip
-          }
-          # Verify the asset was uploaded
-          Start-Sleep -Seconds 3
-          $release = gh release view $tag --json assets
-          Write-Host "Release assets:"
-          $release.assets | ForEach-Object { Write-Host "  $($_.name): $($_.size) bytes" }
+          
+          # Create release first (without asset)
+          $body = @{
+            tag_name = $tag
+            name = "Release $tag"
+            body = "PostureWatch release"
+          } | ConvertTo-Json
+          
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/lextiz/PostureWatch/releases" `
+            -Method POST `
+            -Headers @{ "Authorization" = "Bearer $env:GH_TOKEN"; "Accept" = "application/vnd.github+json" } `
+            -Body $body
+          
+          Write-Host "Release created: $($release.html_url)"
+          
+          # Upload asset using upload URL
+          $fileBytes = [System.IO.File]::ReadAllBytes("PostureWatch-Windows.zip")
+          $uploadUrl = "$($release.upload_url.Replace('{?name,label}', ''))?name=PostureWatch-Windows.zip"
+          
+          $response = Invoke-RestMethod -Uri $uploadUrl `
+            -Method POST `
+            -Headers @{
+              "Authorization" = "Bearer $env:GH_TOKEN"
+              "Content-Type" = "application/zip"
+            } `
+            -Body $fileBytes
+          
+          Write-Host "Asset uploaded successfully"
+          Write-Host "  Name: $($response.name)"
+          Write-Host "  Size: $($response.size) bytes"
