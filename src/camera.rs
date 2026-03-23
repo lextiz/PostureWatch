@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use nokhwa::{
     pixel_format::RgbFormat,
-    utils::{RequestedFormat, RequestedFormatType, YuyvFormat},
+    utils::{RequestedFormat, RequestedFormatType},
     Camera,
 };
 
@@ -224,9 +224,8 @@ impl CameraState {
     fn try_init_camera(&self, index: u32) -> Result<Camera> {
         let idx = nokhwa::utils::CameraIndex::Index(index);
         
-        // Try YUYV format first (most common for webcams), then RGB
-        // Use requested format without trying to create pixel format instances
-        let requested = RequestedFormat::new::<YuyvFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+        // Try RGB format first (most common for webcams)
+        let requested = RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
         match Camera::new(idx, requested) {
             Ok(mut cam) => {
                 if cam.open_stream().is_ok() {
@@ -236,8 +235,8 @@ impl CameraState {
             Err(_) => {}
         }
         
-        // Fallback: try RGB format
-        let requested = RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+        // Fallback: try YUYV format
+        let requested = RequestedFormat::new::<nokhwa::pixel_format::YuyvFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
         let mut cam = Camera::new(idx, requested).context("Failed to create camera")?;
         cam.open_stream().context("Failed to open camera stream")?;
         Ok(cam)
