@@ -104,35 +104,27 @@ jobs:
           zip -r PostureWatch-Windows.zip release/
           ls -la PostureWatch-Windows.zip
 
-      - name: Create GitHub release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./PostureWatch-Windows.zip
-          asset_name: PostureWatch-Windows.zip
-          asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish Release
-        if: success()
+      - name: Create and Upload GitHub Release
         run: |
-          # Get release ID
-          RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" | \
-            python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
-          # Publish the release
-          curl -s -X PATCH \
+          # Create release via API
+          RELEASE_DATA=$(curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" \
-            -d '{"draft": false}'
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -d '{
+              "tag_name": "${{ github.ref_name }}",
+              "name": "Release ${{ github.ref_name }}",
+              "draft": false
+            }')
+          
+          # Extract upload URL
+          UPLOAD_URL=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url","").replace("{?name,label}",""))')
+          
+          # Upload the asset
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/zip" \
+            "$UPLOAD_URL?name=PostureWatch-Windows.zip" \
+            --data-binary @PostureWatch-Windows.zip
+          
+          echo "Release created successfully"
