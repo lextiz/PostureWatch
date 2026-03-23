@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -39,22 +41,17 @@ jobs:
           echo pause >> release\install.bat
           powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
 
-      - name: Set tag name
-        id: set_tag
+      - name: Get tag
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/*") {
-            $tag = "${{ github.ref }}".Replace("refs/tags/", "")
-          } else {
-            $tag = "v0.9.9"
-          }
-          Write-Host "tag_name=$tag" >> $env:GITHUB_OUTPUT
+          git tag -d v0.9.10 2>$null
+          git tag v0.9.10
+          git push origin v0.9.10 --force
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: PostureWatch-Windows.zip
-          tag_name: ${{ steps.set_tag.outputs.tag_name }}
-          name: Release ${{ steps.set_tag.outputs.tag_name }}
           body: PostureWatch release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
