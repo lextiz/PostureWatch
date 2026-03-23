@@ -38,17 +38,24 @@ jobs:
           echo "pause" >> release/install.bat
           zip -r PostureWatch-Windows.zip release/
 
-      - name: Create git tag
-        if: github.event_name == 'workflow_dispatch'
+      - name: Configure gh CLI
         run: |
-          git tag -d v0.9.11 || true
-          git tag v0.9.11
-          git push origin v0.9.11
+          gh auth login --with-token <<< "$GITHUB_TOKEN"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: PostureWatch-Windows.zip
-          body: PostureWatch release
+      - name: Create git tag and release
+        run: |
+          # For workflow_dispatch, create a tag
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git tag -d v0.9.12 2>/dev/null || true
+            git tag v0.9.12
+            git push origin v0.9.12
+          fi
+          
+          # Wait for tag to be available
+          sleep 5
+          
+          # Create release using gh CLI with the correct tag
+          TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.9.12")
+          gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "PostureWatch release" PostureWatch-Windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
