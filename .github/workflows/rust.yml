@@ -117,11 +117,15 @@ jobs:
               "draft": false
             }')
           
+          echo "Release response: $RELEASE_DATA"
+          
           # Extract upload URL
           UPLOAD_URL=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url","").replace("{?name,label}",""))')
           
+          echo "Upload URL: $UPLOAD_URL"
+          
           # Upload the asset
-          curl -s -X POST \
+          curl -v -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/zip" \
             "$UPLOAD_URL?name=PostureWatch-Windows.zip" \
