@@ -1,7 +1,7 @@
-name: Minimal Test
+name: Push Test
 
 on:
-  workflow_dispatch:
+  push:
 
 jobs:
   test:
