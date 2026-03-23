@@ -3,11 +3,13 @@ mod camera;
 mod config;
 mod posture;
 mod posture_monitor;
+mod tray;
 
 use config::Config;
 use posture::PostureAnalyzer;
 use posture_monitor::{AlertEvent, MonitorLogic, Strictness};
 
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex as TokioMutex;
 use tokio::time::{sleep, Duration};
@@ -22,6 +24,7 @@ async fn main() {
     
     // Initialize components
     let camera_state = TokioMutex::new(camera::CameraState::new());
+    let config_arc = Arc::new(TokioMutex::new(config.clone()));
     let analyzer = PostureAnalyzer::new(Config::load());
     let monitor = TokioMutex::new(MonitorLogic::new(strictness));
     let mut last_desk_raise = Instant::now();
@@ -29,6 +32,9 @@ async fn main() {
     println!("PostureWatch started");
     println!("Cycle time: {} seconds", config.cycle_time_secs);
     println!("Strictness: {}", config.strictness);
+
+    // Setup system tray (on Windows) or web UI (on other platforms)
+    tray::TrayManager::new().setup_tray(config_arc.clone());
 
     loop {
         // Check desk raise interval
@@ -74,8 +80,17 @@ async fn main() {
             }
         }
 
-        // Reload config to check for changes
-        config = Config::load();
+        // Reload config to check for changes (tray menu updates)
+        let new_config = Config::load();
+        
+        // Update strictness if changed in config
+        let new_strictness = Strictness::from_str(&new_config.strictness);
+        {
+            let mut monitor_guard = monitor.lock().await;
+            monitor_guard.set_strictness(new_strictness);
+        }
+        
+        config = new_config;
         next_sleep = config.cycle_time_secs;
 
         sleep(Duration::from_secs(next_sleep)).await;
