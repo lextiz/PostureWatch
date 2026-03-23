@@ -21,13 +21,13 @@ jobs:
 
       - name: Build release
         run: |
-          cargo build --release --exe
+          cargo build --release
 
       - name: Package for Windows
         run: |
           if (Test-Path release) { Remove-Item release -Recurse -Force }
           New-Item -ItemType Directory -Path release
-          copy target\release\posturewatch.exe release\
+          copy target\release\posturewatch.exe release\ 2>$null || copy target\release\PostureWatch.exe release\ 2>$null || copy target\release\*.exe release\ 2>$null
           echo @echo off > release\install.bat
           echo echo PostureWatch Installer >> release\install.bat
           echo echo Please run posturewatch.exe to start >> release\install.bat
