@@ -125,7 +125,7 @@ mod tests {
             AlertEvent::FirstWarning
         ));
 
-        // Second bad - warning  
+        // Second bad - warning
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::FirstWarning
