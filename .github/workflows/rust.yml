@@ -89,6 +89,18 @@ jobs:
         run: |
           cargo build --release
 
+      - name: Package for Windows
+        run: |
+          mkdir -p release
+          cp target/release/posturewatch release/
+          # Create a simple installer script for Windows users
+          echo "@echo off" > release/install.bat
+          echo "echo PostureWatch Installer" >> release/install.bat
+          echo "echo Please run posturewatch.exe to start" >> release/install.bat
+          echo "pause" >> release/install.bat
+          zip -r PostureWatch-Windows.zip release/
+          ls -la PostureWatch-Windows.zip
+
       - name: Create GitHub release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -101,6 +113,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/release/posturewatch
+            PostureWatch-Windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
