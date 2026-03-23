@@ -130,7 +130,7 @@ async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
 
         {
             let guard = state.lock().await;
-            let camera_guard = guard.camera_state.lock().await;
+            let mut camera_guard = guard.camera_state.lock().await;
             match camera_guard.capture_frame() {
                 Ok(frame) => match guard.analyzer.analyze(&frame).await {
                     Ok(status) => {
