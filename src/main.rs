@@ -3,6 +3,7 @@ mod camera;
 mod config;
 mod posture;
 mod posture_monitor;
+mod gui;
 
 use config::Config;
 use posture::PostureAnalyzer;
@@ -10,15 +11,15 @@ use posture_monitor::{AlertEvent, MonitorLogic, Strictness};
 
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as TokioMutex;
 use tokio::time::{sleep, Duration};
 
 // App state
 pub struct AppState {
     config: Config,
-    camera_state: Mutex<camera::CameraState>,
+    camera_state: TokioMutex<camera::CameraState>,
     analyzer: PostureAnalyzer,
-    monitor: Mutex<MonitorLogic>,
+    monitor: TokioMutex<MonitorLogic>,
     is_paused: bool,
     last_desk_raise: Instant,
 }
@@ -32,9 +33,9 @@ impl AppState {
         
         Self {
             config,
-            camera_state: Mutex::new(camera::CameraState::new()),
+            camera_state: TokioMutex::new(camera::CameraState::new()),
             analyzer: PostureAnalyzer::new(Config::load()),
-            monitor: Mutex::new(MonitorLogic::new(strictness)),
+            monitor: TokioMutex::new(MonitorLogic::new(strictness)),
             is_paused: false,
             last_desk_raise: Instant::now(),
         }
@@ -48,7 +49,7 @@ impl AppState {
     pub fn update_config(&mut self, new_config: Config) {
         self.config = new_config;
         let strictness = Strictness::from_str(&self.config.strictness);
-        self.monitor = Mutex::new(MonitorLogic::new(strictness));
+        self.monitor = TokioMutex::new(MonitorLogic::new(strictness));
     }
 
     pub fn get_config(&self) -> &Config {
@@ -58,8 +59,11 @@ impl AppState {
 
 #[tokio::main]
 async fn main() {
+    // Initialize GUI (system tray, etc.)
+    gui::init_system_tray();
+    
     // Run app in background thread
-    let app_state = Arc::new(Mutex::new(AppState::new()));
+    let app_state = Arc::new(TokioMutex::new(AppState::new()));
     
     // Spawn the monitoring task
     let state_clone = app_state.clone();
@@ -67,14 +71,13 @@ async fn main() {
         run_monitor(state_clone).await;
     });
 
-    // Keep main thread alive - in real app would run GUI event loop here
-    // For now, just keep the async runtime running
+    // Keep main thread alive - would run GUI event loop here
     loop {
         tokio::time::sleep(Duration::from_secs(60)).await;
     }
 }
 
-async fn run_monitor(state: Arc<Mutex<AppState>>) {
+async fn run_monitor(state: Arc<TokioMutex<AppState>>) {
     println!("PostureWatch started in background mode");
     println!("Configure via tray icon or config file");
     
@@ -147,7 +150,7 @@ async fn run_monitor(state: Arc<Mutex<AppState>>) {
         }
 
         if let Some(status) = status_opt {
-            let mut state = state.lock().await;
+            let state = state.lock().await;
             let mut monitor = state.monitor.lock().await;
             
             match monitor.process_status(status) {
