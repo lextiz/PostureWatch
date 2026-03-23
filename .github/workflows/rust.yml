@@ -105,22 +105,15 @@ jobs:
           zip -r PostureWatch-Windows.zip release/
           ls -la PostureWatch-Windows.zip
 
-      - name: Create Release
-        uses: actions/create-release@v1
+      - name: Create and Upload GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./PostureWatch-Windows.zip
-          asset_name: PostureWatch-Windows.zip
-          asset_content_type: application/zip
+        run: |
+          # Create release and upload asset using gh CLI
+          echo "GITHUB_TOKEN set: $([ -n '$GITHUB_TOKEN' ] && echo 'yes' || echo 'no')"
+          gh auth status || true
+          gh release create "${{ github.ref_name }}" \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "PostureWatch release" \
+            ./PostureWatch-Windows.zip || echo "Release may already exist, trying to upload..."
+          gh release upload "${{ github.ref_name }}" ./PostureWatch-Windows.zip --clobber
