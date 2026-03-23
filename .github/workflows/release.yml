@@ -4,22 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
-  debug:
+  build_and_release:
     runs-on: ubuntu-latest
     steps:
       - name: Debug trigger
         run: |
           echo "Ref: ${{ github.ref }}"
           echo "Event: ${{ github.event_name }}"
-          echo "Token available: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "SHA: ${{ github.sha }}"
 
-  build_and_release:
-    runs-on: ubuntu-latest
-    needs: debug
-
-    steps:
       - name: Checkout
         uses: actions/checkout@v4
 
