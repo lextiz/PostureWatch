@@ -106,26 +106,37 @@ jobs:
 
       - name: Create and Upload GitHub Release
         run: |
-          # Create release via API
-          RELEASE_DATA=$(curl -s -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "https://api.github.com/repos/${{ github.repository }}/releases" \
-            -d '{
-              "tag_name": "${{ github.ref_name }}",
-              "name": "Release ${{ github.ref_name }}",
-              "draft": false
-            }')
+          # First, check if release already exists for this tag
+          EXISTING=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}")
           
-          echo "Release response: $RELEASE_DATA"
+          RELEASE_ID=$(echo "$EXISTING" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("id",""))')
           
-          # Extract upload URL
-          UPLOAD_URL=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url","").replace("{?name,label}",""))')
+          if [ -z "$RELEASE_ID" ]; then
+            # Release doesn't exist, create it
+            RELEASE_DATA=$(curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases" \
+              -d '{
+                "tag_name": "${{ github.ref_name }}",
+                "name": "Release ${{ github.ref_name }}",
+                "draft": false
+              }')
+            RELEASE_ID=$(echo "$RELEASE_DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))')
+          fi
+          
+          echo "Release ID: $RELEASE_ID"
+          
+          # Get upload URL from the release
+          UPLOAD_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID" | \
+            python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url","").replace("{?name,label}",""))')
           
           echo "Upload URL: $UPLOAD_URL"
           
           # Upload the asset
-          curl -v -X POST \
+          curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/zip" \
             "$UPLOAD_URL?name=PostureWatch-Windows.zip" \
