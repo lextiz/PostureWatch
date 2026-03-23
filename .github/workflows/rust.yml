@@ -108,59 +108,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # First, check if release already exists for this tag
-          EXISTING=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}")
-          
-          echo "Existing release: $EXISTING"
-          
-          RELEASE_ID=$(python3 << EOF
-import json
-data = json.loads("$EXISTING")
-print(data.get("id", ""))
-EOF
-)
-          
-          if [ -z "$RELEASE_ID" ]; then
-            # Release doesn't exist, create it
-            RELEASE_DATA=$(curl -s -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              "https://api.github.com/repos/${{ github.repository }}/releases" \
-              -d '{
-                "tag_name": "${{ github.ref_name }}",
-                "name": "Release ${{ github.ref_name }}",
-                "draft": false
-              }')
-            echo "Created release: $RELEASE_DATA"
-            RELEASE_ID=$(python3 << EOF
-import json
-data = json.loads("$RELEASE_DATA")
-print(data.get("id", ""))
-EOF
-)
-          fi
-          
-          echo "Release ID: $RELEASE_ID"
-          
-          # Get upload URL from the release
-          RELEASE_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID")
-          echo "Release info: $RELEASE_INFO"
-          UPLOAD_URL=$(python3 << EOF
-import json
-data = json.loads("$RELEASE_INFO")
-print(data.get("upload_url", "").replace("{?name,label}", ""))
-EOF
-)
-          
-          echo "Upload URL: $UPLOAD_URL"
-          
-          # Upload the asset
-          curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Content-Type: application/zip" \
-            "$UPLOAD_URL?name=PostureWatch-Windows.zip" \
-            --data-binary @PostureWatch-Windows.zip
-          
-          echo "Release created successfully"
+          # Create release using GitHub CLI (available in runner)
+          # gh release create will automatically detect the tag
+          gh release create "${{ github.ref_name }}" \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes \
+            ./PostureWatch-Windows.zip
