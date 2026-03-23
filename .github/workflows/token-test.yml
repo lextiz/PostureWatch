@@ -1,4 +1,4 @@
-name: Checkout Test
+name: Minimal Test
 
 on:
   workflow_dispatch:
@@ -7,12 +7,4 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: false
-      - name: Debug
-        run: |
-          echo "Token available: ${{ secrets.GITHUB_TOKEN != '' }}"
-          echo "Default token: ${{ env.GITHUB_TOKEN != '' }}"
-      - run: ls -la
+      - run: echo "Hello"
