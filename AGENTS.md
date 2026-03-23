@@ -29,6 +29,8 @@ The CI pipeline runs these jobs in parallel:
 - **build**: Builds the project (`cargo build`)
 - **build-release**: Builds release artifacts and creates GitHub releases (on release events)
 
+When polling GitHub Actions CI use exponential backoff (times in seconds): 1,3,5,10,30,60,120,180,180,timeout
+
 ### Best Practices
 - Always format code with `cargo fmt` before committing
 - Address clippy warnings (they're treated as errors in CI)
