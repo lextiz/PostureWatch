@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::posture_monitor::Strictness;
 use anyhow::Result;
 use base64::Engine;
 use reqwest::Client;
@@ -13,13 +14,15 @@ pub enum PostureStatus {
 pub struct PostureAnalyzer {
     client: Client,
     config: Config,
+    strictness: Strictness,
 }
 
 impl PostureAnalyzer {
     pub fn new(config: Config) -> Self {
         Self {
             client: Client::new(),
-            config,
+            config: config.clone(),
+            strictness: Strictness::from_str(&config.strictness),
         }
     }
 
@@ -29,11 +32,21 @@ impl PostureAnalyzer {
         }
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
-        // Prompt that handles no-person cases
-        let prompt = "You are a posture expert. Look at this image and analyze what you see.
-- If you can see a person's face or upper body, analyze their sitting posture. Is their back straight? Are shoulders level? Reply with 'Good' if posture is acceptable, 'Bad' if they are slouching or have poor posture.
-- If you cannot see a clear human face or body in the frame (empty room, no person, camera pointed away, person too far, etc.), reply with ONLY 'NoPerson'.
-Reply with ONLY one word: 'Good', 'Bad', or 'NoPerson'.";
+        
+        // Strictness-aware prompt
+        let strictness_guidance = match self.strictness {
+            Strictness::High => "Be very strict. Even minor slouching, rounded shoulders, or leaning to one side is Bad.",
+            Strictness::Medium => "Be moderately strict. Clear slouching, hunched back, or significantly uneven shoulders is Bad. Minor posture variations are acceptable.",
+            Strictness::Low => "Be lenient. Only flag truly poor posture - severe slouching, chin on chest, or extreme forward lean. Slight imperfections are OK.",
+        };
+        
+        let prompt = format!("You are a posture expert. Your task is to analyze the person's sitting posture.
+
+Guidelines:
+- {}
+- If you cannot see a clear human face or upper body (empty room, no person, camera pointed away, person too far, blurred, etc.), reply with ONLY 'NoPerson'.
+
+Output: Reply with ONLY one word: 'Good', 'Bad', or 'NoPerson'.", strictness_guidance);
 
         let body = json!({
             "model": self.config.model,
