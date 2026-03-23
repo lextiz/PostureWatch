@@ -40,14 +40,15 @@ jobs:
           powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
 
       - name: Configure gh CLI
-        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $env:GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}"
-          echo "$env:GITHUB_TOKEN" | gh auth login --with-token
+          echo "$env:GH_TOKEN" | gh auth login --with-token
           gh auth status
 
       - name: Create GitHub Release
-        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/*") {
             $tag = "${{ github.ref }}".Replace("refs/tags/", "")
