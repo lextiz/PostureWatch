@@ -16,33 +16,13 @@ jobs:
       - run: echo "Hello world"
 
   build_and_release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
-      - name: Debug trigger
-        run: |
-          echo "Ref: ${{ github.ref }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "GITHUB_TOKEN present: ${{ secrets.GITHUB_TOKEN != '' }}"
-          echo "GITHUB_TOKEN first chars: ${{ secrets.GITHUB_TOKEN }}"
-          whoami
-          which gh
-          gh --version
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system deps
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential pkg-config libglib2.0-dev libgtk-3-dev libgdk-pixbuf2.0-dev libv4l-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libclang-dev libssl-dev cmake
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
 
       - name: Build release
         run: |
@@ -50,33 +30,34 @@ jobs:
 
       - name: Package for Windows
         run: |
-          mkdir -p release
-          cp target/release/posturewatch release/
-          echo "@echo off" > release/install.bat
-          echo "echo PostureWatch Installer" >> release/install.bat
-          echo "echo Please run posturewatch.exe to start" >> release/install.bat
-          echo "pause" >> release/install.bat
-          zip -r PostureWatch-Windows.zip release/
-          ls -la PostureWatch-Windows.zip
+          mkdir release
+          copy target\release\posturewatch.exe release\
+          echo @echo off > release\install.bat
+          echo echo PostureWatch Installer >> release\install.bat
+          echo echo Please run posturewatch.exe to start >> release\install.bat
+          echo pause >> release\install.bat
+          powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
 
       - name: Configure gh CLI
+        shell: pwsh
         run: |
-          echo "Configuring gh CLI..."
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          $env:GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}"
+          echo "$env:GITHUB_TOKEN" | gh auth login --with-token
           gh auth status
 
       - name: Create GitHub Release
+        shell: pwsh
         run: |
-          if [[ "${{ github.event_name }}" == "push" ]] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-          else
-            TAG_NAME="v0.9.4"
-          fi
-          echo "Creating release for tag: $TAG_NAME"
-          # Check if release already exists
-          if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "Release $TAG_NAME already exists, uploading asset..."
-            gh release upload "$TAG_NAME" ./PostureWatch-Windows.zip --force
-          else
-            gh release create "$TAG_NAME" --title "Release $TAG_NAME" --notes "PostureWatch release" ./PostureWatch-Windows.zip
-          fi
+          if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/*") {
+            $tag = "${{ github.ref }}".Replace("refs/tags/", "")
+          } else {
+            $tag = "v0.9.5"
+          }
+          Write-Host "Creating release for tag: $tag"
+          $existing = gh release view $tag 2>$null
+          if ($existing) {
+            Write-Host "Release $tag exists, uploading..."
+            gh release upload $tag ./PostureWatch-Windows.zip --force
+          } else {
+            gh release create $tag --title "Release $tag" --notes "PostureWatch release" ./PostureWatch-Windows.zip
+          }
