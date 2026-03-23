@@ -38,45 +38,12 @@ jobs:
           echo echo Please run posturewatch.exe to start >> release\install.bat
           echo pause >> release\install.bat
           powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
-          dir PostureWatch-Windows.zip
 
       - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PostureWatch-Windows.zip
+          name: Release v0.9.8
+          body: PostureWatch release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if ("${{ github.event_name }}" -eq "push" -and "${{ github.ref }}" -like "refs/tags/*") {
-            $tag = "${{ github.ref }}".Replace("refs/tags/", "")
-          } else {
-            $tag = "v0.9.7"
-          }
-          Write-Host "Creating release for tag: $tag"
-          
-          # Create release first (without asset)
-          $body = @{
-            tag_name = $tag
-            name = "Release $tag"
-            body = "PostureWatch release"
-          } | ConvertTo-Json
-          
-          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/lextiz/PostureWatch/releases" `
-            -Method POST `
-            -Headers @{ "Authorization" = "Bearer $env:GH_TOKEN"; "Accept" = "application/vnd.github+json" } `
-            -Body $body
-          
-          Write-Host "Release created: $($release.html_url)"
-          
-          # Upload asset using upload URL
-          $fileBytes = [System.IO.File]::ReadAllBytes("PostureWatch-Windows.zip")
-          $uploadUrl = "$($release.upload_url.Replace('{?name,label}', ''))?name=PostureWatch-Windows.zip"
-          
-          $response = Invoke-RestMethod -Uri $uploadUrl `
-            -Method POST `
-            -Headers @{
-              "Authorization" = "Bearer $env:GH_TOKEN"
-              "Content-Type" = "application/zip"
-            } `
-            -Body $fileBytes
-          
-          Write-Host "Asset uploaded successfully"
-          Write-Host "  Name: $($response.name)"
-          Write-Host "  Size: $($response.size) bytes"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
