@@ -19,7 +19,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build release (exe)
+      - name: Build release
         run: |
           cargo build --release --exe
 
@@ -34,23 +34,10 @@ jobs:
           echo pause >> release\install.bat
           powershell -Command "Compress-Archive -Path release -DestinationPath PostureWatch-Windows.zip -Force"
 
-      - name: Upload to Release
-        uses: actions/upload-release-asset@v1.9.0
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./PostureWatch-Windows.zip
-          asset_name: PostureWatch-Windows.zip
-          asset_content_type: application/zip
-        env:
-          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1.0.1
+          files: PostureWatch-Windows.zip
+          body: PostureWatch Windows release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: PostureWatch release
