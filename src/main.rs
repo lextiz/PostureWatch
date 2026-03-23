@@ -4,95 +4,174 @@ mod config;
 mod posture;
 mod posture_monitor;
 
-use crate::alert::{notify_bad_posture, notify_desk_raise};
-use crate::camera::CameraState;
-use crate::config::Config;
-use crate::posture::PostureAnalyzer;
-use crate::posture_monitor::{AlertEvent, MonitorLogic, Strictness};
+use config::Config;
+use posture::PostureAnalyzer;
+use posture_monitor::{AlertEvent, MonitorLogic, Strictness};
+
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
-#[tokio::main]
-async fn main() {
-    if let Err(e) = run_app().await {
-        eprintln!("Fatal error: {:?}", e);
+// App state
+pub struct AppState {
+    config: Config,
+    camera_state: Mutex<camera::CameraState>,
+    analyzer: PostureAnalyzer,
+    monitor: Mutex<MonitorLogic>,
+    is_paused: bool,
+    last_desk_raise: Instant,
+}
+
+impl AppState {
+    pub fn new() -> Self {
+        let mut config = Config::load();
+        config.prompt_for_api_key();
+        
+        let strictness = Strictness::from_str(&config.strictness);
+        
+        Self {
+            config,
+            camera_state: Mutex::new(camera::CameraState::new()),
+            analyzer: PostureAnalyzer::new(Config::load()),
+            monitor: Mutex::new(MonitorLogic::new(strictness)),
+            is_paused: false,
+            last_desk_raise: Instant::now(),
+        }
+    }
+
+    pub fn toggle_pause(&mut self) -> bool {
+        self.is_paused = !self.is_paused;
+        self.is_paused
+    }
+
+    pub fn update_config(&mut self, new_config: Config) {
+        self.config = new_config;
+        let strictness = Strictness::from_str(&self.config.strictness);
+        self.monitor = Mutex::new(MonitorLogic::new(strictness));
+    }
+
+    pub fn get_config(&self) -> &Config {
+        &self.config
     }
 }
 
-async fn run_app() -> anyhow::Result<()> {
-    let mut config = Config::load();
+#[tokio::main]
+async fn main() {
+    // Run app in background thread
+    let app_state = Arc::new(Mutex::new(AppState::new()));
     
-    // Prompt for API key if not set
-    config.prompt_for_api_key();
-    
-    let config = Arc::new(config);
-    let mut camera_state = CameraState::new();
-    let analyzer = PostureAnalyzer::new((*config).clone());
-    
-    let strictness = Strictness::from_str(&config.strictness);
-    let mut monitor = MonitorLogic::new(strictness);
-    
-    println!("PostureWatch active. Settings loaded.");
-    println!("Cycle time: {} seconds", config.cycle_time_secs);
-    println!("Strictness: {}", config.strictness);
-    println!("Camera warming up...");
-    
-    // Warmup
-    for i in 1..=3 {
-        println!("Warmup capture {}...", i);
-        match camera_state.capture_frame() {
-            Ok(_) => println!("  Warmup frame {} OK", i),
-            Err(e) => eprintln!("  Warmup frame {} error: {:?}", i, e),
-        }
-        std::thread::sleep(std::time::Duration::from_millis(500));
-    }
-    println!("Warmup complete. Starting monitoring...");
-    
-    let mut last_desk_raise = Instant::now();
-    
+    // Spawn the monitoring task
+    let state_clone = app_state.clone();
+    tokio::spawn(async move {
+        run_monitor(state_clone).await;
+    });
+
+    // Keep main thread alive - in real app would run GUI event loop here
+    // For now, just keep the async runtime running
     loop {
-        // Desk raise reminder
-        if last_desk_raise.elapsed().as_secs() >= config.desk_raise_interval_secs {
-            notify_desk_raise(&config);
-            last_desk_raise = Instant::now();
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
+}
+
+async fn run_monitor(state: Arc<Mutex<AppState>>) {
+    println!("PostureWatch started in background mode");
+    println!("Configure via tray icon or config file");
+    
+    // Initial config
+    {
+        let state = state.lock().await;
+        println!("Cycle time: {} seconds", state.config.cycle_time_secs);
+        println!("Strictness: {}", state.config.strictness);
+    }
+
+    loop {
+        // Check if paused
+        let should_skip = {
+            let state = state.lock().await;
+            if state.is_paused {
+                println!("Paused - waiting...");
+                true
+            } else {
+                false
+            }
+        };
+
+        if should_skip {
+            sleep(Duration::from_secs(5)).await;
+            continue;
         }
+
+        // Check desk raise interval
+        let mut should_notify_desk = false;
+        {
+            let state = state.lock().await;
+            if state.last_desk_raise.elapsed().as_secs() >= state.config.desk_raise_interval_secs {
+                should_notify_desk = true;
+            }
+        }
+
+        if should_notify_desk {
+            let state = state.lock().await;
+            alert::notify_desk_raise(&state.config);
+            drop(state);
+            
+            let mut state = state.lock().await;
+            state.last_desk_raise = Instant::now();
+        }
+
+        // Capture and analyze
+        let mut next_sleep = 10;
+        let mut status_opt = None;
         
-        println!("Capturing frame...");
-        
-        let mut next_sleep = config.cycle_time_secs;
-        
-        match camera_state.capture_frame() {
-            Ok(frame) => {
-                match analyzer.analyze(&frame).await {
-                    Ok(status) => {
-                        match monitor.process_status(status) {
-                            AlertEvent::NotifyBadPosture => {
-                                notify_bad_posture(&config);
-                                next_sleep = 10;
-                            }
-                            AlertEvent::FirstWarning => {
-                                println!("Warning: Posture degraded.");
-                                next_sleep = 10;
-                            }
-                            AlertEvent::PostureImproved => {
-                                println!("Posture improved. Good job!");
-                            }
-                            AlertEvent::None => {}
+        {
+            let state = state.lock().await;
+            match state.camera_state.lock().await.capture_frame() {
+                Ok(frame) => {
+                    match state.analyzer.analyze(&frame).await {
+                        Ok(status) => {
+                            status_opt = Some(status);
+                        }
+                        Err(e) => {
+                            eprintln!("Analysis error: {:?}", e);
+                            let mut monitor = state.monitor.lock().await;
+                            *monitor = MonitorLogic::new(Strictness::from_str(&state.config.strictness));
                         }
                     }
-                    Err(e) => {
-                        eprintln!("Analysis error: {:?}", e);
-                        monitor = MonitorLogic::new(strictness);
-                    }
+                }
+                Err(e) => {
+                    eprintln!("Camera error: {:?}", e);
+                    next_sleep = 10;
                 }
             }
-            Err(e) => {
-                eprintln!("Camera error: {:?}", e);
-                next_sleep = 10;
+        }
+
+        if let Some(status) = status_opt {
+            let mut state = state.lock().await;
+            let mut monitor = state.monitor.lock().await;
+            
+            match monitor.process_status(status) {
+                AlertEvent::NotifyBadPosture => {
+                    alert::notify_bad_posture(&state.config);
+                    next_sleep = 10;
+                }
+                AlertEvent::FirstWarning => {
+                    println!("Warning: Posture degraded.");
+                    next_sleep = 10;
+                }
+                AlertEvent::PostureImproved => {
+                    println!("Posture improved. Good job!");
+                }
+                AlertEvent::None => {}
             }
         }
-        
+
+        // Get cycle time from config
+        {
+            let state = state.lock().await;
+            next_sleep = state.config.cycle_time_secs;
+        }
+
         sleep(Duration::from_secs(next_sleep)).await;
     }
 }

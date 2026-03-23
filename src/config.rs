@@ -116,6 +116,11 @@ impl Config {
         Ok(())
     }
 
+    /// Check if API key is set (without prompting)
+    pub fn has_api_key(&self) -> bool {
+        !self.api_key.is_empty()
+    }
+
     pub fn prompt_for_api_key(&mut self) {
         if self.api_key.is_empty() {
             println!("\n=================================================");
