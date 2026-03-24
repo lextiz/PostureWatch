@@ -4,8 +4,8 @@
 #![allow(dead_code)]
 
 use crate::config::Config;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
@@ -27,9 +27,9 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::TrayIconBuilder;
         use tray_icon::Icon;
-        
+        use tray_icon::TrayIconBuilder;
+
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
