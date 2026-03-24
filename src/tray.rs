@@ -28,30 +28,26 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray() -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{
-            menu::{Menu, MenuItem},
-            tray_icon::Icon,
-            TrayIconBuilder,
-        };
+        use tray_icon::{menu::Menu, tray_icon::Icon, TrayIconBuilder};
 
-        // Create menu items - use MenuItem::new with (id, text, enabled)
-        let open_item = MenuItem::new("open", "Open Settings", true)?;
-        let strictness_low = MenuItem::new("strictness_low", "Low", true)?;
-        let strictness_medium = MenuItem::new("strictness_medium", "Medium", true)?;
-        let strictness_high = MenuItem::new("strictness_high", "High", true)?;
-        let quit_item = MenuItem::new("quit", "Quit", true)?;
+        // Create menu items
+        let open_item = tray_icon::menu::MenuItem::new("open", "Open Settings", true)?;
+        let low_item = tray_icon::menu::MenuItem::new("low", "Low", true)?;
+        let med_item = tray_icon::menu::MenuItem::new("medium", "Medium", true)?;
+        let high_item = tray_icon::menu::MenuItem::new("high", "High", true)?;
+        let quit_item = tray_icon::menu::MenuItem::new("quit", "Quit", true)?;
 
-        // Build menu using raw API
-        let menu = Menu::new(&[
-            &open_item,
-            &strictness_low,
-            &strictness_medium,
-            &strictness_high,
-            &quit_item,
+        // Build menu using with_items
+        let menu = Menu::with_items(&[
+            &open_item as &dyn tray_icon::menu::MenuItemExt,
+            &low_item as &dyn tray_icon::menu::MenuItemExt,
+            &med_item as &dyn tray_icon::menu::MenuItemExt,
+            &high_item as &dyn tray_icon::menu::MenuItemExt,
+            &quit_item as &dyn tray_icon::menu::MenuItemExt,
         ]);
 
         // Create icon from RGBA data - 32x32 blue square
-        let size = 32;
+        let size: u32 = 32;
         let mut rgba = vec![0u8; (size * size * 4) as usize];
         for i in (0..rgba.len()).step_by(4) {
             rgba[i] = 0; // R
@@ -64,7 +60,7 @@ impl TrayManager {
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_menu(&menu)
+            .with_menu(Box::new(menu))
             .with_tooltip("PostureWatch")
             .build()?;
 
