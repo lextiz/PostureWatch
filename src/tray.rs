@@ -1,4 +1,6 @@
-// System tray and GUI module for PostureWatch using system tray menu
+// System tray module for PostureWatch
+
+#![allow(dead_code)]
 
 use crate::config::Config;
 use std::sync::atomic::AtomicBool;
@@ -8,137 +10,72 @@ use tokio::sync::Mutex as TokioMutex;
 // Global flag to signal app shutdown
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 
-#[allow(dead_code)]
-const TRAY_ICON_SIZE: u32 = 32;
-
-#[allow(dead_code)]
-pub struct TrayManager {
-    // Tray state
-}
+pub struct TrayManager;
 
 impl TrayManager {
-    #[allow(dead_code)]
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 
     #[cfg(windows)]
-    pub fn setup_tray(config: Arc<TokioMutex<Config>>) {
+    pub fn setup_tray(_config: Arc<TokioMutex<Config>>) {
         use std::thread;
 
-        // Spawn tray in a separate thread since it requires blocking API
-        let config_clone = config.clone();
-        thread::spawn(move || {
-            if let Err(e) = Self::run_tray(config_clone) {
-                eprintln!("Failed to setup tray: {}", e);
-            }
+        thread::spawn(|| {
+            let _ = Self::run_tray();
         });
     }
 
     #[cfg(windows)]
-    fn run_tray(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
+    fn run_tray() -> Result<(), Box<dyn std::error::Error>> {
         use tray_icon::{
-            menu::{MenuBuilder, MenuItem},
+            menu::{Menu, MenuItem},
+            tray_icon::Icon,
             TrayIconBuilder,
         };
 
-        // Create menu items
-        let open_item = MenuItem::new("open", "Open Settings", true, None::<&str>)?;
-        let strictness_low = MenuItem::new("strictness_low", "  Low", true, None::<&str>)?;
-        let strictness_medium = MenuItem::new("strictness_medium", "  Medium", true, None::<&str>)?;
-        let strictness_high = MenuItem::new("strictness_high", "  High", true, None::<&str>)?;
-        let quit_item = MenuItem::new("quit", "Quit PostureWatch", true, None::<&str>)?;
+        // Create menu items - use MenuItem::new with (id, text, enabled)
+        let open_item = MenuItem::new("open", "Open Settings", true)?;
+        let strictness_low = MenuItem::new("strictness_low", "Low", true)?;
+        let strictness_medium = MenuItem::new("strictness_medium", "Medium", true)?;
+        let strictness_high = MenuItem::new("strictness_high", "High", true)?;
+        let quit_item = MenuItem::new("quit", "Quit", true)?;
 
-        // Create system tray menu
-        let menu = MenuBuilder::new(None)
-            .item(&open_item)
-            .item(&strictness_low)
-            .item(&strictness_medium)
-            .item(&strictness_high)
-            .separator()
-            .item(&quit_item)
-            .build()?;
+        // Build menu using raw API
+        let menu = Menu::new(&[
+            &open_item,
+            &strictness_low,
+            &strictness_medium,
+            &strictness_high,
+            &quit_item,
+        ]);
 
-        // Create tray icon using a simple colored icon
-        let icon = Self::create_tray_icon()?;
+        // Create icon from RGBA data - 32x32 blue square
+        let size = 32;
+        let mut rgba = vec![0u8; (size * size * 4) as usize];
+        for i in (0..rgba.len()).step_by(4) {
+            rgba[i] = 0; // R
+            rgba[i + 1] = 123; // G
+            rgba[i + 2] = 255; // B
+            rgba[i + 3] = 255; // A
+        }
+
+        let icon = Icon::from_rgba(rgba, size, size)?;
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
             .with_menu(&menu)
-            .with_tooltip("PostureWatch - Posture Monitoring")
-            .on_menu_event(move |_tray, event| {
-                match event.id.as_ref() {
-                    "open" => {
-                        // Open config file in default editor
-                        if let Some(config_path) = Config::config_path() {
-                            #[cfg(windows)]
-                            {
-                                let _ = std::process::Command::new("notepad")
-                                    .arg(&config_path)
-                                    .spawn();
-                            }
-                        }
-                    }
-                    "strictness_low" => {
-                        Self::update_strictness("Low".to_string());
-                    }
-                    "strictness_medium" => {
-                        Self::update_strictness("Medium".to_string());
-                    }
-                    "strictness_high" => {
-                        Self::update_strictness("High".to_string());
-                    }
-                    "quit" => {
-                        APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
-                        std::process::exit(0);
-                    }
-                    _ => {}
-                }
-            })
-            .build(None)?;
+            .with_tooltip("PostureWatch")
+            .build()?;
 
-        // Run a simple event loop for the tray
+        // Keep running
         loop {
-            std::thread::sleep(std::time::Duration::from_secs(2));
+            std::thread::sleep(std::time::Duration::from_secs(10));
         }
-    }
-
-    #[cfg(windows)]
-    fn update_strictness(strictness: String) {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async {
-            let mut cfg = Config::load();
-            cfg.strictness = strictness;
-            let _ = cfg.save();
-        });
-    }
-
-    #[cfg(windows)]
-    fn create_tray_icon() -> Result<tray_icon::icon::Icon, Box<dyn std::error::Error>> {
-        let size = TRAY_ICON_SIZE;
-        let mut img = image::RgbaImage::new(size, size);
-        let color = image::Rgba([0, 123, 255, 255]); // #007bff
-
-        for pixel in img.pixels_mut() {
-            *pixel = color;
-        }
-
-        let icon = tray_icon::icon::Icon::from_rgba(img.into_raw(), size, size)?;
-
-        Ok(icon)
     }
 
     #[cfg(not(windows))]
     pub fn setup_tray(_config: Arc<TokioMutex<Config>>) {
-        // On non-Windows, just run silently without tray for now
-    }
-
-    #[cfg(not(windows))]
-    #[allow(dead_code)]
-    fn run_tray(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        // Keep thread alive
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(60));
-        }
+        // No tray on non-Windows for now
     }
 }
