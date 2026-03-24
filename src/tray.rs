@@ -37,8 +37,8 @@ impl TrayManager {
         let icon = Self::create_icon()?;
 
         let mut _tray = TrayIconBuilder::new()
-            .icon(icon)
-            .tooltip("PostureWatch")
+            .with_icon(icon)
+            .with_tooltip("PostureWatch")
             .build()?;
 
         // Keep alive - tray icon stays until app exits
