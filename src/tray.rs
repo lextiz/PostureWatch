@@ -1,8 +1,8 @@
 // System tray and GUI module for PostureWatch using system tray menu
 
 use crate::config::Config;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
 // Global flag to signal app shutdown
@@ -37,7 +37,10 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{TrayIconBuilder, menu::{MenuBuilder, MenuItem}};
+        use tray_icon::{
+            menu::{MenuBuilder, MenuItem},
+            TrayIconBuilder,
+        };
 
         // Create menu items
         let open_item = MenuItem::new("open", "Open Settings", true, None::<&str>)?;
@@ -120,11 +123,7 @@ impl TrayManager {
             *pixel = color;
         }
 
-        let icon = tray_icon::icon::Icon::from_rgba(
-            img.into_raw(),
-            size,
-            size,
-        )?;
+        let icon = tray_icon::icon::Icon::from_rgba(img.into_raw(), size, size)?;
 
         Ok(icon)
     }
