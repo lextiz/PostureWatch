@@ -28,7 +28,7 @@ impl TrayManager {
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
         use tray_icon::TrayIconBuilder;
-        use tray_icon::icon::Icon;
+        use tray_icon::Icon;
         
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
@@ -50,7 +50,7 @@ impl TrayManager {
     }
 
     #[cfg(windows)]
-    fn create_icon() -> Result<Icon, Box<dyn std::error::Error>> {
+    fn create_icon() -> Result<tray_icon::Icon, Box<dyn std::error::Error>> {
         // Create a simple 32x32 cyan icon (PostureWatch brand color)
         let size: u32 = 32;
         let mut rgba = vec![0u8; (size * size * 4) as usize];
@@ -60,7 +60,7 @@ impl TrayManager {
             rgba[i + 2] = 200; // B
             rgba[i + 3] = 255; // A
         }
-        Ok(Icon::from_rgba(rgba, size, size)?)
+        Ok(tray_icon::Icon::from_rgba(rgba, size, size)?)
     }
 
     #[cfg(not(windows))]
