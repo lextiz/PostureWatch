@@ -28,10 +28,8 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{
-            icon::Icon,
-            TrayIconBuilder,
-        };
+        use tray_icon::icon::Icon;
+        use tray_icon::TrayIconBuilder;
         
         // Create tray icon
         let icon = Self::create_icon()?;
