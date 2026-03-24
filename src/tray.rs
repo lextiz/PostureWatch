@@ -28,7 +28,8 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray() -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{tray_icon::Icon, TrayIconBuilder};
+        use tray_icon::icon::Icon;
+        use tray_icon::TrayIconBuilder;
 
         // Create icon from RGBA data - 32x32 blue square
         let size: u32 = 32;
