@@ -28,23 +28,7 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray() -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{menu::Menu, tray_icon::Icon, TrayIconBuilder};
-
-        // Create menu items
-        let open_item = tray_icon::menu::MenuItem::new("open", "Open Settings", true)?;
-        let low_item = tray_icon::menu::MenuItem::new("low", "Low", true)?;
-        let med_item = tray_icon::menu::MenuItem::new("medium", "Medium", true)?;
-        let high_item = tray_icon::menu::MenuItem::new("high", "High", true)?;
-        let quit_item = tray_icon::menu::MenuItem::new("quit", "Quit", true)?;
-
-        // Build menu using with_items
-        let menu = Menu::with_items(&[
-            &open_item as &dyn tray_icon::menu::MenuItemExt,
-            &low_item as &dyn tray_icon::menu::MenuItemExt,
-            &med_item as &dyn tray_icon::menu::MenuItemExt,
-            &high_item as &dyn tray_icon::menu::MenuItemExt,
-            &quit_item as &dyn tray_icon::menu::MenuItemExt,
-        ]);
+        use tray_icon::{tray_icon::Icon, TrayIconBuilder};
 
         // Create icon from RGBA data - 32x32 blue square
         let size: u32 = 32;
@@ -60,8 +44,7 @@ impl TrayManager {
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_menu(Box::new(menu))
-            .with_tooltip("PostureWatch")
+            .with_tooltip("PostureWatch - Right-click for menu")
             .build()?;
 
         // Keep running
