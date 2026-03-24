@@ -1,8 +1,8 @@
 // System tray and GUI module for PostureWatch using system tray menu
 
 use crate::config::Config;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tokio::sync::Mutex as TokioMutex;
 
 // Global flag to signal app shutdown
@@ -36,35 +36,38 @@ impl TrayManager {
     }
 
     #[cfg(windows)]
-    fn run_tray(config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::{MenuBuilder, TrayIconBuilder};
+    fn run_tray(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
+        use tray_icon::{TrayIconBuilder, menu::{MenuBuilder, MenuItem}};
 
-        // Load configuration
-        let _current_config = Config::load();
+        // Create menu items
+        let open_item = MenuItem::new("open", "Open Settings", true, None::<&str>)?;
+        let strictness_low = MenuItem::new("strictness_low", "  Low", true, None::<&str>)?;
+        let strictness_medium = MenuItem::new("strictness_medium", "  Medium", true, None::<&str>)?;
+        let strictness_high = MenuItem::new("strictness_high", "  High", true, None::<&str>)?;
+        let quit_item = MenuItem::new("quit", "Quit PostureWatch", true, None::<&str>)?;
 
         // Create system tray menu
         let menu = MenuBuilder::new(None)
-            .text("open", "Open Settings")
-            .text("strictness", "Strictness Level")
-            .text("strictness_low", "  Low")
-            .text("strictness_medium", "  Medium")
-            .text("strictness_high", "  High")
+            .item(&open_item)
+            .item(&strictness_low)
+            .item(&strictness_medium)
+            .item(&strictness_high)
             .separator()
-            .text("quit", "Quit PostureWatch")
+            .item(&quit_item)
             .build()?;
 
-        // Create tray icon
+        // Create tray icon using a simple colored icon
         let icon = Self::create_tray_icon()?;
 
         let _tray = TrayIconBuilder::new()
-            .icon(icon)
-            .menu(&menu)
-            .tooltip("PostureWatch - Posture Monitoring")
+            .with_icon(icon)
+            .with_menu(&menu)
+            .with_tooltip("PostureWatch - Posture Monitoring")
             .on_menu_event(move |_tray, event| {
                 match event.id.as_ref() {
                     "open" => {
                         // Open config file in default editor
-                        if let Some(config_path) = crate::config::Config::config_path() {
+                        if let Some(config_path) = Config::config_path() {
                             #[cfg(windows)]
                             {
                                 let _ = std::process::Command::new("notepad")
@@ -83,7 +86,7 @@ impl TrayManager {
                         Self::update_strictness("High".to_string());
                     }
                     "quit" => {
-                        APP_RUNNING.store(false, Ordering::SeqCst);
+                        APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
                         std::process::exit(0);
                     }
                     _ => {}
@@ -108,7 +111,7 @@ impl TrayManager {
     }
 
     #[cfg(windows)]
-    fn create_tray_icon() -> Result<tray_icon::Icon, Box<dyn std::error::Error>> {
+    fn create_tray_icon() -> Result<tray_icon::icon::Icon, Box<dyn std::error::Error>> {
         let size = TRAY_ICON_SIZE;
         let mut img = image::RgbaImage::new(size, size);
         let color = image::Rgba([0, 123, 255, 255]); // #007bff
@@ -117,7 +120,11 @@ impl TrayManager {
             *pixel = color;
         }
 
-        let icon = tray_icon::Icon::from_rgba(img.into_raw(), size, size)?;
+        let icon = tray_icon::icon::Icon::from_rgba(
+            img.into_raw(),
+            size,
+            size,
+        )?;
 
         Ok(icon)
     }

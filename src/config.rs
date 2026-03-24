@@ -78,7 +78,7 @@ impl Config {
         Config::default()
     }
 
-    fn config_path() -> Option<PathBuf> {
+    pub fn config_path() -> Option<PathBuf> {
         // Try user's existing path first: C:\Users\...\AppData\Roaming\com.posturewatch\PostureWatch\config.toml
         let user_path = std::env::var("APPDATA").ok().map(|appdata| {
             std::path::PathBuf::from(appdata)
