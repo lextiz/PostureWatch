@@ -28,7 +28,6 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::icon::Icon;
         use tray_icon::TrayIconBuilder;
         
         // Create tray icon
@@ -51,7 +50,7 @@ impl TrayManager {
     }
 
     #[cfg(windows)]
-    fn create_icon() -> Result<Icon, Box<dyn std::error::Error>> {
+    fn create_icon() -> Result<tray_icon::icon::Icon, Box<dyn std::error::Error>> {
         // Create a simple 32x32 blue icon
         let size: u32 = 32;
         let mut rgba = vec![0u8; (size * size * 4) as usize];
