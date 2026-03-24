@@ -55,8 +55,8 @@ impl TrayManager {
         let size: u32 = 32;
         let mut rgba = vec![0u8; (size * size * 4) as usize];
         for i in (0..rgba.len()).step_by(4) {
-            rgba[i] = 0;       // R
-            rgba[i + 1] = 180; // G  
+            rgba[i] = 0; // R
+            rgba[i + 1] = 180; // G
             rgba[i + 2] = 200; // B
             rgba[i + 3] = 255; // A
         }
