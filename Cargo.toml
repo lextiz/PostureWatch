@@ -1,8 +1,13 @@
+# PostureWatch - GUI application
 [package]
 name = "posturewatch"
 version = "0.1.0"
 edition = "2021"
 description = "Posture monitoring app with webcam and LLM"
+
+[[bin]]
+name = "posturewatch"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { version = "1.32", features = ["full"] }
@@ -35,3 +40,6 @@ notify-rust = "4.9"
 strip = true
 lto = true
 codegen-units = 1
+
+[profile.release.target.'x86_64-pc-windows-gnu'.rustflags]
+rustflags = ["-C", "link-args=-Wl,--subsystem,windows"]

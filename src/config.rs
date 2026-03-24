@@ -89,7 +89,7 @@ impl Config {
 
         if let Some(ref path) = user_path {
             if path.exists() {
-                println!("Config: using existing user path: {:?}", path);
+                // Silent: app runs from tray
                 return user_path;
             }
         }
@@ -97,7 +97,7 @@ impl Config {
         // Standard path: C:\Users\...\AppData\Roaming\com\posturewatch\PostureWatch\config.toml
         let standard = ProjectDirs::from("com", "posturewatch", "PostureWatch").map(|dirs| {
             let path = dirs.config_dir().join("config.toml");
-            println!("Config: using standard path: {:?}", path);
+            // Silent: app runs from tray
             path
         });
 
