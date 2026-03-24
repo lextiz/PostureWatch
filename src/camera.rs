@@ -94,14 +94,14 @@ impl CameraState {
                 // Manual YUYV to RGB conversion
                 // YUYV format: Y0 U0 Y1 V0 for every 2 pixels (shared U and V)
                 let mut rgb_data = Vec::with_capacity((w as usize) * (h as usize) * 3);
-                
+
                 for chunk in buffer.chunks(4) {
                     if chunk.len() == 4 {
                         let y0 = chunk[0] as f32;
                         let y1 = chunk[2] as f32;
                         let u = chunk[1] as f32 - 128.0;
                         let v = chunk[3] as f32 - 128.0;
-                        
+
                         // First pixel
                         let r = (y0 + 1.402 * v).clamp(0.0, 255.0) as u8;
                         let g = (y0 - 0.344 * u - 0.714 * v).clamp(0.0, 255.0) as u8;
@@ -109,7 +109,7 @@ impl CameraState {
                         rgb_data.push(r);
                         rgb_data.push(g);
                         rgb_data.push(b);
-                        
+
                         // Second pixel
                         let r = (y1 + 1.402 * v).clamp(0.0, 255.0) as u8;
                         let g = (y1 - 0.344 * u - 0.714 * v).clamp(0.0, 255.0) as u8;
@@ -119,7 +119,7 @@ impl CameraState {
                         rgb_data.push(b);
                     }
                 }
-                
+
                 if let Some(img) = image::RgbImage::from_raw(w, h, rgb_data) {
                     return encode_to_jpeg(image::DynamicImage::ImageRgb8(img));
                 }
@@ -135,38 +135,39 @@ impl CameraState {
                 let uv_width = w as usize / 2;
                 let uv_height = h as usize / 2;
                 let uv_plane_len = uv_width * uv_height;
-                
+
                 if buffer.len() >= y_plane_len + 2 * uv_plane_len {
                     let y_plane = &buffer[0..y_plane_len];
                     let u_plane = &buffer[y_plane_len..y_plane_len + uv_plane_len];
-                    let v_plane = &buffer[y_plane_len + uv_plane_len..y_plane_len + 2 * uv_plane_len];
-                    
+                    let v_plane =
+                        &buffer[y_plane_len + uv_plane_len..y_plane_len + 2 * uv_plane_len];
+
                     let mut rgb_data = Vec::with_capacity(y_plane_len * 3);
-                    
+
                     for y in 0..h as usize {
                         for x in 0..w as usize {
                             let y_idx = y * w as usize + x;
                             let y_val = y_plane[y_idx] as f32;
-                            
+
                             // UV sampling is half in both directions
                             let uv_x = x / 2;
                             let uv_y = y / 2;
                             let uv_idx = uv_y * uv_width + uv_x;
-                            
+
                             let u = u_plane[uv_idx] as f32 - 128.0;
                             let v = v_plane[uv_idx] as f32 - 128.0;
-                            
+
                             // YUV to RGB conversion (BT.601)
                             let r = (y_val + 1.402 * v).clamp(0.0, 255.0) as u8;
                             let g = (y_val - 0.344 * u - 0.714 * v).clamp(0.0, 255.0) as u8;
                             let b = (y_val + 1.772 * u).clamp(0.0, 255.0) as u8;
-                            
+
                             rgb_data.push(r);
                             rgb_data.push(g);
                             rgb_data.push(b);
                         }
                     }
-                    
+
                     if let Some(img) = image::RgbImage::from_raw(w, h, rgb_data) {
                         return encode_to_jpeg(image::DynamicImage::ImageRgb8(img));
                     }
@@ -193,7 +194,7 @@ impl CameraState {
     fn init_camera_with_retry(&mut self) -> Result<Camera> {
         // Try multiple camera indices to find one that works
         let max_cameras = 5;
-        
+
         // First try the last known valid index
         if let Some(last_idx) = self.last_valid_index {
             if let Ok(cam) = self.try_init_camera(last_idx) {
@@ -201,7 +202,7 @@ impl CameraState {
                 return Ok(cam);
             }
         }
-        
+
         // Try cameras from current index onwards
         for i in 0..max_cameras {
             let idx = (self.camera_index + i) % max_cameras;
@@ -217,25 +218,26 @@ impl CameraState {
                 }
             }
         }
-        
+
         anyhow::bail!("No available cameras found")
     }
-    
+
     fn try_init_camera(&self, index: u32) -> Result<Camera> {
         // Try RGB format first (most common for webcams)
-        let requested = RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
-        match Camera::new(nokhwa::utils::CameraIndex::Index(index), requested) {
-            Ok(mut cam) => {
-                if cam.open_stream().is_ok() {
-                    return Ok(cam);
-                }
+        let requested =
+            RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+        if let Ok(mut cam) = Camera::new(nokhwa::utils::CameraIndex::Index(index), requested) {
+            if cam.open_stream().is_ok() {
+                return Ok(cam);
             }
-            Err(_) => {}
         }
-        
+
         // Fallback: try YUYV format
-        let requested = RequestedFormat::new::<nokhwa::pixel_format::YuyvFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
-        let mut cam = Camera::new(nokhwa::utils::CameraIndex::Index(index), requested).context("Failed to create camera")?;
+        let requested = RequestedFormat::new::<nokhwa::pixel_format::YuyvFormat>(
+            RequestedFormatType::AbsoluteHighestFrameRate,
+        );
+        let mut cam = Camera::new(nokhwa::utils::CameraIndex::Index(index), requested)
+            .context("Failed to create camera")?;
         cam.open_stream().context("Failed to open camera stream")?;
         Ok(cam)
     }

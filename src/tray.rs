@@ -1,14 +1,23 @@
-// System tray and GUI module for PostureWatch
+// System tray and GUI module for PostureWatch using system tray menu
 
 use crate::config::Config;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
+// Global flag to signal app shutdown
+pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
+
+#[allow(dead_code)]
+const TRAY_ICON_SIZE: u32 = 32;
+
+#[allow(dead_code)]
 pub struct TrayManager {
     // Tray state
 }
 
 impl TrayManager {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {}
     }
@@ -16,7 +25,7 @@ impl TrayManager {
     #[cfg(windows)]
     pub fn setup_tray(config: Arc<TokioMutex<Config>>) {
         use std::thread;
-        
+
         // Spawn tray in a separate thread since it requires blocking API
         let config_clone = config.clone();
         thread::spawn(move || {
@@ -24,179 +33,106 @@ impl TrayManager {
                 eprintln!("Failed to setup tray: {}", e);
             }
         });
-        
-        // Also start HTTP server for config UI
-        let config_clone2 = config.clone();
-        thread::spawn(move || {
-            if let Err(e) = Self::start_http_server(config_clone2) {
-                eprintln!("HTTP server error: {}", e);
-            }
-        });
     }
 
     #[cfg(windows)]
     fn run_tray(config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        // For Windows, we'll use a simple console-based menu for now
-        // The HTTP server provides the GUI configuration
-        println!("PostureWatch running - open http://localhost:8080 to configure");
-        
-        // Keep the thread alive to handle system tray events
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(60));
-        }
-    }
-    
-    #[cfg(windows)]
-    fn start_http_server(config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use std::io::{Read, Write};
-        use std::net::TcpListener;
-        
-        let listener = TcpListener::bind("0.0.0.0:8080")?;
-        println!("HTTP config server listening on http://localhost:8080");
-        
-        for stream in listener.incoming() {
-            let mut stream = stream?;
-            let config_clone = config.clone();
-            
-            let mut buffer = [0u8; 1024];
-            if let Ok(_) = stream.read(&mut buffer) {
-                let request = String::from_utf8_lossy(&buffer);
-                
-                if request.starts_with("GET / ") {
-                    // Serve HTML config page
-                    let html = Self::get_config_html(&config_clone);
-                    let response = format!(
-                        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\n\r\n{}",
-                        html.len(), html
-                    );
-                    let _ = stream.write_all(response.as_bytes());
-                } else if request.starts_with("POST /set_strictness") {
-                    // Parse the strictness from request
-                    if let Some(pos) = request.find("strictness=") {
-                        let strictness_raw = &request[pos + 11..].split_whitespace().next().unwrap_or("Medium");
-                        let strictness = match *strictness_raw {
-                            "Low" => "Low",
-                            "High" => "High", 
-                            _ => "Medium",
-                        };
-                        
-                        // Update config
-                        let runtime = tokio::runtime::Runtime::new().unwrap();
-                        runtime.block_on(async {
-                            let mut cfg = config_clone.lock().await;
-                            cfg.strictness = strictness.to_string();
-                            let _ = cfg.save();
-                        });
-                        
-                        let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nOK";
-                        let _ = stream.write_all(response.as_bytes());
-                    } else {
-                        let response = "HTTP/1.1 400 Bad Request\r\n\r\n";
-                        let _ = stream.write_all(response.as_bytes());
+        use tray_icon::{MenuBuilder, TrayIconBuilder};
+
+        // Load configuration
+        let _current_config = Config::load();
+
+        // Create system tray menu
+        let menu = MenuBuilder::new(None)
+            .text("open", "Open Settings")
+            .text("strictness", "Strictness Level")
+            .text("strictness_low", "  Low")
+            .text("strictness_medium", "  Medium")
+            .text("strictness_high", "  High")
+            .separator()
+            .text("quit", "Quit PostureWatch")
+            .build()?;
+
+        // Create tray icon
+        let icon = Self::create_tray_icon()?;
+
+        let _tray = TrayIconBuilder::new()
+            .icon(icon)
+            .menu(&menu)
+            .tooltip("PostureWatch - Posture Monitoring")
+            .on_menu_event(move |_tray, event| {
+                match event.id.as_ref() {
+                    "open" => {
+                        // Open config file in default editor
+                        if let Some(config_path) = crate::config::Config::config_path() {
+                            #[cfg(windows)]
+                            {
+                                let _ = std::process::Command::new("notepad")
+                                    .arg(&config_path)
+                                    .spawn();
+                            }
+                        }
                     }
-                } else {
-                    let response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    let _ = stream.write_all(response.as_bytes());
+                    "strictness_low" => {
+                        Self::update_strictness("Low".to_string());
+                    }
+                    "strictness_medium" => {
+                        Self::update_strictness("Medium".to_string());
+                    }
+                    "strictness_high" => {
+                        Self::update_strictness("High".to_string());
+                    }
+                    "quit" => {
+                        APP_RUNNING.store(false, Ordering::SeqCst);
+                        std::process::exit(0);
+                    }
+                    _ => {}
                 }
-            }
+            })
+            .build(None)?;
+
+        // Run a simple event loop for the tray
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(2));
         }
-        
-        Ok(())
     }
-    
+
     #[cfg(windows)]
-    fn get_config_html(_config: &Arc<TokioMutex<Config>>) -> String {
-        // Read config synchronously from disk
-        let current_strictness = Config::load().strictness;
-        
-        format!(r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <title>PostureWatch Configuration</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; }}
-        h1 {{ color: #333; }}
-        .setting {{ margin: 20px 0; }}
-        select {{ padding: 10px; font-size: 16px; }}
-        button {{ padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }}
-        button:hover {{ background: #0056b3; }}
-        .status {{ color: green; margin-top: 10px; }}
-    </style>
-</head>
-<body>
-    <h1>PostureWatch Configuration</h1>
-    <p>Open http://localhost:8080 to configure PostureWatch</p>
-    <form id="configForm">
-        <div class="setting">
-            <label for="strictness">Strictness Level:</label><br>
-            <select id="strictness" name="strictness">
-                <option value="Low" {}>Low</option>
-                <option value="Medium" {}>Medium</option>
-                <option value="High" {}>High</option>
-            </select>
-        </div>
-        <button type="submit">Save</button>
-    </form>
-    <div id="status" class="status"></div>
-    <script>
-        document.getElementById('configForm').addEventListener('submit', async (e) => {{
-            e.preventDefault();
-            const strictness = document.getElementById('strictness').value;
-            const formData = new FormData();
-            formData.append('strictness', strictness);
-            
-            try {{
-                const response = await fetch('/set_strictness', {{
-                    method: 'POST',
-                    body: new URLSearchParams(formData)
-                }});
-                if (response.ok) {{
-                    document.getElementById('status').textContent = 'Settings saved! Reload to see changes.';
-                }}
-            }} catch (e) {{
-                document.getElementById('status').textContent = 'Error saving settings';
-            }}
-        }});
-    </script>
-</body>
-</html>
-"#, 
-            if current_strictness == "Low" { "selected" } else { "" },
-            if current_strictness == "Medium" { "selected" } else { "" },
-            if current_strictness == "High" { "selected" } else { "" }
-        )
+    fn update_strictness(strictness: String) {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let mut cfg = Config::load();
+            cfg.strictness = strictness;
+            let _ = cfg.save();
+        });
+    }
+
+    #[cfg(windows)]
+    fn create_tray_icon() -> Result<tray_icon::Icon, Box<dyn std::error::Error>> {
+        let size = TRAY_ICON_SIZE;
+        let mut img = image::RgbaImage::new(size, size);
+        let color = image::Rgba([0, 123, 255, 255]); // #007bff
+
+        for pixel in img.pixels_mut() {
+            *pixel = color;
+        }
+
+        let icon = tray_icon::Icon::from_rgba(img.into_raw(), size, size)?;
+
+        Ok(icon)
     }
 
     #[cfg(not(windows))]
     pub fn setup_tray(_config: Arc<TokioMutex<Config>>) {
-        println!("Starting web UI on http://localhost:8080");
-        
-        std::thread::spawn(|| {
-            if let Err(e) = Self::start_http_server() {
-                eprintln!("Web server error: {}", e);
-            }
-        });
+        // On non-Windows, just run silently without tray for now
     }
-    
+
     #[cfg(not(windows))]
-    fn start_http_server() -> Result<(), Box<dyn std::error::Error>> {
-        use std::io::{Read, Write};
-        use std::net::TcpListener;
-        
-        let listener = TcpListener::bind("0.0.0.0:8080")?;
-        println!("HTTP config server listening on http://localhost:8080");
-        
-        for stream in listener.incoming() {
-            let mut stream = stream?;
-            let mut buffer = [0u8; 1024];
-            if let Ok(_) = stream.read(&mut buffer) {
-                let request = String::from_utf8_lossy(&buffer);
-                let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nPostureWatch Config Server";
-                let _ = stream.write_all(response.as_bytes());
-            }
+    #[allow(dead_code)]
+    fn run_tray(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
+        // Keep thread alive
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(60));
         }
-        
-        Ok(())
     }
 }

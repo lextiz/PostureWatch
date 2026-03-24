@@ -4,17 +4,13 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[allow(dead_code)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub enum Strictness {
     Low,
+    #[default]
     Medium,
     High,
-}
-
-impl Default for Strictness {
-    fn default() -> Self {
-        Strictness::Medium
-    }
 }
 
 impl std::fmt::Display for Strictness {
@@ -119,10 +115,12 @@ impl Config {
     }
 
     /// Check if API key is set (without prompting)
+    #[allow(dead_code)]
     pub fn has_api_key(&self) -> bool {
         !self.api_key.is_empty()
     }
 
+    #[allow(dead_code)]
     pub fn prompt_for_api_key(&mut self) {
         if self.api_key.is_empty() {
             println!("\n=================================================");
