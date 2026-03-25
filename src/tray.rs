@@ -31,8 +31,8 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder, MenuEvent};
-        use tray_icon::TrayIconBuilder;
+        use muda::menu::{Menu, MenuEvent, MenuItem};
+        use tray_icon::{Icon, TrayIconBuilder};
 
         // Set up menu event handler
         MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
@@ -60,13 +60,18 @@ impl TrayManager {
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build menu using builder pattern
-        let menu: Menu = MenuBuilder::new()
-            .text("Show Settings")
-            .text("Stop Monitoring")
-            .separator()
-            .text("Quit")
-            .build()?;
+        // Build menu using muda
+        let show_item = MenuItem::with_id("Show Settings", "Show Settings", true, None::<&str>)?;
+        let toggle_item = MenuItem::with_id("Stop Monitoring", "Stop Monitoring", true, None::<&str>)?;
+        let separator = muda::menu::PredefinedMenuItem::separator(None)?;
+        let quit_item = MenuItem::with_id("Quit", "Quit", true, None::<&str>)?;
+
+        let menu = Menu::with_items(&[
+            &show_item,
+            &toggle_item,
+            &separator,
+            &quit_item,
+        ])?;
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
