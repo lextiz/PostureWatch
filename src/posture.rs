@@ -35,9 +35,18 @@ impl PostureAnalyzer {
 
         // Strictness-aware prompt
         let strictness_guidance = match self.strictness {
-            Strictness::High => "Be very strict. Even minor slouching, rounded shoulders, or leaning to one side is Bad.",
-            Strictness::Medium => "Be moderately strict. Clear slouching, hunched back, or significantly uneven shoulders is Bad. Minor posture variations are acceptable.",
-            Strictness::Low => "Be lenient. Only flag truly poor posture - severe slouching, chin on chest, or extreme forward lean. Slight imperfections are OK.",
+            Strictness::High => {
+                "Be somewhat strict. Only flag clear problems: forward head (chin significantly forward), \
+clearly rounded shoulders, or sustained severe slouching. Don't flag minor variations."
+            }
+            Strictness::Medium => {
+                "Be balanced. Only flag clear bad posture: forward head position, visibly rounded shoulders, \
+or clearly hunched back. Normal sitting variations and brief moments are OK. When in doubt, say Good."
+            }
+            Strictness::Low => {
+                "Be very lenient. Only flag severe, sustained bad posture - chin on chest, extreme forward lean, \
+or very obvious slouching. Minor slouching, shifting, or normal posture variations are Good. Be conservative."
+            }
         };
 
         let prompt = format!("You are a posture expert. Your task is to analyze the person's sitting posture.
@@ -89,7 +98,6 @@ Output: Reply with ONLY one word: 'Good', 'Bad', or 'NoPerson'.", strictness_gui
 
         // Debug: print the response
         if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
-            println!("API Response: {}", content);
             let text = content.to_lowercase().trim().to_string();
             if text.starts_with("good") {
                 return Ok(PostureStatus::Good);

@@ -8,7 +8,7 @@ mod tray;
 use config::Config;
 use posture::PostureAnalyzer;
 use posture_monitor::{AlertEvent, MonitorLogic, Strictness};
-use tray::APP_RUNNING;
+use tray::{APP_RUNNING, MONITORING_ENABLED};
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -34,6 +34,12 @@ async fn main() {
 
     // Main monitoring loop
     while APP_RUNNING.load(std::sync::atomic::Ordering::SeqCst) {
+        // Check if monitoring is enabled
+        if !MONITORING_ENABLED.load(std::sync::atomic::Ordering::SeqCst) {
+            sleep(Duration::from_secs(1)).await;
+            continue;
+        }
+
         // Check desk raise interval
         if last_desk_raise.elapsed().as_secs() >= config.desk_raise_interval_secs {
             alert::notify_desk_raise(&config);
