@@ -33,7 +33,7 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder, MenuItem, PredefinedMenuItem};
+        use tray_icon::menu::{Menu, MenuItem};
         use tray_icon::{Icon, TrayIconBuilder};
 
         // Create tray icon from RGBA data
@@ -42,11 +42,7 @@ impl TrayManager {
         // Build menu items
         let show_item = MenuItem::new("Show Settings")?;
         let quit_item = MenuItem::new("Quit")?;
-        
-        let menu = Menu::new()
-            .item(&show_item)
-            .separator()
-            .item(&quit_item)?;
+        let menu = Menu::new().item(&show_item).separator().item(&quit_item)?;
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
