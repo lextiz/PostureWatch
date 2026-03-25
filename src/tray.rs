@@ -33,23 +33,24 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder};
+        use tray_icon::menu::{Menu, MenuBuilder, MenuItem, PredefinedMenuItem};
         use tray_icon::{Icon, TrayIconBuilder};
 
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build a simple menu with Show Settings and Quit
-        let menu: Menu = MenuBuilder::new()
-            .text("Show Settings")
+        // Build menu items
+        let show_item = MenuItem::new("Show Settings")?;
+        let quit_item = MenuItem::new("Quit")?;
+        
+        let menu = Menu::new()
+            .item(&show_item)
             .separator()
-            .text("Quit")
-            .build()?;
+            .item(&quit_item)?;
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_tooltip("PostureWatch - Monitoring")
-            .with_menu(Box::new(menu))
+            .with_menu(menu)
             .build()?;
 
         // Keep alive - tray icon stays until app exits
