@@ -28,16 +28,16 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder, MenuItemBuilder};
+        use tray_icon::menu::{Menu, MenuBuilder, MenuId, MenuItemBuilder};
         use tray_icon::{Icon, TrayIconBuilder};
 
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build menu items
-        let show_item = MenuItemBuilder::new("Show Settings").id("show").build()?;
-        let toggle_item = MenuItemBuilder::new("Stop Monitoring").id("toggle").build()?;
-        let quit_item = MenuItemBuilder::new("Quit").id("quit").build()?;
+        // Build menu items with proper MenuId
+        let show_item = MenuItemBuilder::new("Show Settings").id(MenuId::new("show")).build()?;
+        let toggle_item = MenuItemBuilder::new("Stop Monitoring").id(MenuId::new("toggle")).build()?;
+        let quit_item = MenuItemBuilder::new("Quit").id(MenuId::new("quit")).build()?;
 
         let menu: Menu = MenuBuilder::new()
             .item(&show_item)
@@ -46,10 +46,10 @@ impl TrayManager {
             .item(&quit_item)
             .build()?;
 
-        let mut tray = TrayIconBuilder::new()
-            .icon(icon)
-            .tooltip("PostureWatch - Monitoring")
-            .menu(Box::new(menu))
+        let _tray = TrayIconBuilder::new()
+            .with_icon(icon)
+            .with_tooltip("PostureWatch - Monitoring")
+            .with_menu(Box::new(menu))
             .on_menu_event(move |_tray, event| {
                 match event.id.as_ref() {
                     "quit" => {
