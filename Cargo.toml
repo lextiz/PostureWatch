@@ -28,7 +28,7 @@ log = "0.4"
 env_logger = "0.11"
 
 # System tray
-tray-icon = { version = "0.21", features = ["menu"] }
+tray-icon = "0.21"
 
 [target.'cfg(windows)'.dependencies]
 winrt-notification = "0.5"

@@ -28,7 +28,7 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{MenuBuilder, MenuItemBuilder};
+        use tray_icon::menu::{Menu, MenuBuilder, MenuItemBuilder};
         use tray_icon::{Icon, TrayIconBuilder};
 
         // Create tray icon from RGBA data
@@ -39,7 +39,7 @@ impl TrayManager {
         let toggle_item = MenuItemBuilder::new("Stop Monitoring").id("toggle").build()?;
         let quit_item = MenuItemBuilder::new("Quit").id("quit").build()?;
 
-        let menu = MenuBuilder::new()
+        let menu: Menu = MenuBuilder::new()
             .item(&show_item)
             .item(&toggle_item)
             .separator()
@@ -49,8 +49,8 @@ impl TrayManager {
         let mut tray = TrayIconBuilder::new()
             .icon(icon)
             .tooltip("PostureWatch - Monitoring")
-            .menu(&menu)
-            .on_menu_event(move |tray, event| {
+            .menu(Box::new(menu))
+            .on_menu_event(move |_tray, event| {
                 match event.id.as_ref() {
                     "quit" => {
                         APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
@@ -58,13 +58,9 @@ impl TrayManager {
                     "toggle" => {
                         let current = MONITORING_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
                         MONITORING_ENABLED.store(!current, std::sync::atomic::Ordering::SeqCst);
-                        // Update tooltip
-                        let status = if !current { "Monitoring" } else { "Paused" };
-                        let _ = tray.set_tooltip(Some(&format!("PostureWatch - {}", status)));
                     }
                     "show" => {
-                        // Open config GUI (future: Slint-based)
-                        // For now, open config file location
+                        // Open config file location
                         if let Some(path) = crate::config::Config::config_path() {
                             let _ = std::process::Command::new("explorer")
                                 .arg("/select,")
