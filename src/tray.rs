@@ -13,6 +13,9 @@ use tray_icon::Icon;
 
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 
+// Global monitoring flag - can be toggled from tray menu
+pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
+
 pub struct TrayManager;
 
 impl TrayManager {
