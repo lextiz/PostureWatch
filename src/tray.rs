@@ -8,6 +8,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
+#[cfg(windows)]
+use tray_icon::Icon;
+
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
 
@@ -29,7 +32,7 @@ impl TrayManager {
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
         use tray_icon::menu::{Menu, MenuBuilder, MenuEvent};
-        use tray_icon::{Icon, TrayIconBuilder};
+        use tray_icon::TrayIconBuilder;
 
         // Set up menu event handler
         MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
