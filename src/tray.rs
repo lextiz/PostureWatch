@@ -8,7 +8,13 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
+#[cfg(windows)]
+use tray_icon::Icon;
+
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
+
+// Global monitoring flag - can be toggled from tray menu
+pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
 
 pub struct TrayManager;
 
@@ -27,16 +33,22 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::Icon;
-        use tray_icon::TrayIconBuilder;
+        use tray_icon::menu::Menu;
+        use tray_icon::{Icon, TrayIconBuilder};
 
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        let mut _tray = TrayIconBuilder::new()
+        // Build menu - use items() method
+        let show_item = tray_icon::menu::MenuItem::new("Show Settings", true, None);
+        let quit_item = tray_icon::menu::MenuItem::new("Quit", true, None);
+        let menu = Menu::with_items(&[&show_item, &quit_item]).unwrap();
+
+        let _tray = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_tooltip("PostureWatch")
-            .build()?;
+            .with_menu(Box::new(menu))
+            .build()
+            .ok();
 
         // Keep alive - tray icon stays until app exits
         loop {
@@ -50,7 +62,7 @@ impl TrayManager {
     }
 
     #[cfg(windows)]
-    fn create_icon() -> Result<tray_icon::Icon, Box<dyn std::error::Error>> {
+    fn create_icon() -> Result<Icon, Box<dyn std::error::Error>> {
         // Create a simple 32x32 cyan icon (PostureWatch brand color)
         let size: u32 = 32;
         let mut rgba = vec![0u8; (size * size * 4) as usize];
@@ -60,7 +72,7 @@ impl TrayManager {
             rgba[i + 2] = 200; // B
             rgba[i + 3] = 255; // A
         }
-        Ok(tray_icon::Icon::from_rgba(rgba, size, size)?)
+        Ok(Icon::from_rgba(rgba, size, size)?)
     }
 
     #[cfg(not(windows))]
