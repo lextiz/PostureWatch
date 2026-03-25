@@ -57,7 +57,8 @@ impl CameraState {
             // Helper to encode DynamicImage to JPEG bytes
             fn encode_to_jpeg(img: image::DynamicImage) -> anyhow::Result<Vec<u8>> {
                 let mut cursor = std::io::Cursor::new(Vec::new());
-                img.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(80))
+                let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, 80);
+                img.write_with_encoder(encoder)
                     .context("Failed to encode as JPEG")?;
                 Ok(cursor.into_inner())
             }
