@@ -35,9 +35,15 @@ impl TrayManager {
         let icon = Self::create_icon()?;
 
         // Build menu items with proper MenuId
-        let show_item = MenuItemBuilder::new("Show Settings").id(MenuId::new("show")).build()?;
-        let toggle_item = MenuItemBuilder::new("Stop Monitoring").id(MenuId::new("toggle")).build()?;
-        let quit_item = MenuItemBuilder::new("Quit").id(MenuId::new("quit")).build()?;
+        let show_item = MenuItemBuilder::new("Show Settings")
+            .id(MenuId::new("show"))
+            .build()?;
+        let toggle_item = MenuItemBuilder::new("Stop Monitoring")
+            .id(MenuId::new("toggle"))
+            .build()?;
+        let quit_item = MenuItemBuilder::new("Quit")
+            .id(MenuId::new("quit"))
+            .build()?;
 
         let menu: Menu = MenuBuilder::new()
             .item(&show_item)
