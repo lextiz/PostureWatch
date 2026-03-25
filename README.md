@@ -13,6 +13,17 @@ It periodically checks your posture using your webcam and an LLM endpoint, falli
 - **Persistent Configuration:** Fully configurable via a local `config.toml`.
 - **Privacy Mode:** Ensures minimal data is sent or uses pure local fallback to maintain privacy.
 
+## Roadmap
+
+- Remove "privacy mode" and "local fallback" 
+- Simplify code and architecture
+- Code and prompts review
+- Prompts customization
+- Repeating alert reminder
+- Desk raise reminder
+- Break reminder
+- OS portability
+
 ## Architecture
 
 1. **Camera Module:** Interfaces with the system webcam to capture JPEG-encoded RGB frames.
