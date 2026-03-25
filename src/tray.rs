@@ -12,7 +12,6 @@ use tokio::sync::Mutex as TokioMutex;
 use tray_icon::Icon;
 
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
-pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
 
 pub struct TrayManager;
 
@@ -31,52 +30,16 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use muda::menu::{Menu, MenuEvent, MenuItem};
         use tray_icon::{Icon, TrayIconBuilder};
-
-        // Set up menu event handler
-        MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
-            let id = event.id.as_ref();
-            match id {
-                "Quit" => {
-                    APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
-                }
-                "Stop Monitoring" => {
-                    let current = MONITORING_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
-                    MONITORING_ENABLED.store(!current, std::sync::atomic::Ordering::SeqCst);
-                }
-                "Show Settings" => {
-                    if let Some(path) = crate::config::Config::config_path() {
-                        let _ = std::process::Command::new("explorer")
-                            .arg("/select,")
-                            .arg(&path)
-                            .spawn();
-                    }
-                }
-                _ => {}
-            }
-        }));
 
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build menu using muda
-        let show_item = MenuItem::with_id("Show Settings", "Show Settings", true, None::<&str>)?;
-        let toggle_item = MenuItem::with_id("Stop Monitoring", "Stop Monitoring", true, None::<&str>)?;
-        let separator = muda::menu::PredefinedMenuItem::separator(None)?;
-        let quit_item = MenuItem::with_id("Quit", "Quit", true, None::<&str>)?;
-
-        let menu = Menu::with_items(&[
-            &show_item,
-            &toggle_item,
-            &separator,
-            &quit_item,
-        ])?;
-
+        // Build a simple menu without complex event handling
+        // Note: On Windows, tray icons have a default context menu
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
             .with_tooltip("PostureWatch - Monitoring")
-            .with_menu(Box::new(menu))
             .build()?;
 
         // Keep alive - tray icon stays until app exits

@@ -27,9 +27,8 @@ toml = "0.8"
 log = "0.4"
 env_logger = "0.11"
 
-# System tray
+# System tray - includes muda for menu support
 tray-icon = "0.21"
-muda = "0.17"
 
 [target.'cfg(windows)'.dependencies]
 winrt-notification = "0.5"
