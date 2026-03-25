@@ -28,12 +28,11 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem};
+        use tray_icon::menu::{Menu, MenuBuilder, MenuEvent, PredefinedMenuItem};
         use tray_icon::{Icon, TrayIconBuilder};
 
         // Set up menu event handler
         MenuEvent::set_event_handler(Some(move |event| {
-            // Get the text of the clicked item
             let id = event.id.as_ref();
             match id {
                 "Quit" => {
@@ -44,7 +43,6 @@ impl TrayManager {
                     MONITORING_ENABLED.store(!current, std::sync::atomic::Ordering::SeqCst);
                 }
                 "Show Settings" => {
-                    // Open config file location
                     if let Some(path) = crate::config::Config::config_path() {
                         let _ = std::process::Command::new("explorer")
                             .arg("/select,")
@@ -59,17 +57,12 @@ impl TrayManager {
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build menu items
-        let show_item = MenuItemBuilder::new("Show Settings").build()?;
-        let toggle_item = MenuItemBuilder::new("Stop Monitoring").build()?;
-        let separator = PredefinedMenuItem::separator()?;
-        let quit_item = MenuItemBuilder::new("Quit").build()?;
-
+        // Build menu using builder pattern
         let menu: Menu = MenuBuilder::new()
-            .item(&show_item)
-            .item(&toggle_item)
-            .item(&separator)
-            .item(&quit_item)
+            .text("Show Settings")
+            .text("Stop Monitoring")
+            .separator()
+            .text("Quit")
             .build()?;
 
         let _tray = TrayIconBuilder::new()
