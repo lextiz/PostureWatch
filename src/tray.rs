@@ -42,7 +42,7 @@ impl TrayManager {
         // Build menu - use items() method
         let show_item = tray_icon::menu::MenuItem::new("Show Settings", true, None);
         let quit_item = tray_icon::menu::MenuItem::new("Quit", true, None);
-        let menu = Menu::with_items(&[&show_item, &quit_item]);
+        let menu = Menu::with_items(&[&show_item, &quit_item]).unwrap();
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
