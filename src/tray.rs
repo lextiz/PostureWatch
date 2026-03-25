@@ -28,27 +28,47 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn run_tray_loop(_config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
-        use tray_icon::menu::{Menu, MenuBuilder, MenuId, MenuItemBuilder};
+        use tray_icon::menu::{Menu, MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem};
         use tray_icon::{Icon, TrayIconBuilder};
+
+        // Set up menu event handler
+        MenuEvent::set_event_handler(Some(move |event| {
+            // Get the text of the clicked item
+            let id = event.id.as_ref();
+            match id {
+                "Quit" => {
+                    APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
+                }
+                "Stop Monitoring" => {
+                    let current = MONITORING_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
+                    MONITORING_ENABLED.store(!current, std::sync::atomic::Ordering::SeqCst);
+                }
+                "Show Settings" => {
+                    // Open config file location
+                    if let Some(path) = crate::config::Config::config_path() {
+                        let _ = std::process::Command::new("explorer")
+                            .arg("/select,")
+                            .arg(&path)
+                            .spawn();
+                    }
+                }
+                _ => {}
+            }
+        }));
 
         // Create tray icon from RGBA data
         let icon = Self::create_icon()?;
 
-        // Build menu items with proper MenuId
-        let show_item = MenuItemBuilder::new("Show Settings")
-            .id(MenuId::new("show"))
-            .build()?;
-        let toggle_item = MenuItemBuilder::new("Stop Monitoring")
-            .id(MenuId::new("toggle"))
-            .build()?;
-        let quit_item = MenuItemBuilder::new("Quit")
-            .id(MenuId::new("quit"))
-            .build()?;
+        // Build menu items
+        let show_item = MenuItemBuilder::new("Show Settings").build()?;
+        let toggle_item = MenuItemBuilder::new("Stop Monitoring").build()?;
+        let separator = PredefinedMenuItem::separator()?;
+        let quit_item = MenuItemBuilder::new("Quit").build()?;
 
         let menu: Menu = MenuBuilder::new()
             .item(&show_item)
             .item(&toggle_item)
-            .separator()
+            .item(&separator)
             .item(&quit_item)
             .build()?;
 
@@ -56,27 +76,6 @@ impl TrayManager {
             .with_icon(icon)
             .with_tooltip("PostureWatch - Monitoring")
             .with_menu(Box::new(menu))
-            .on_menu_event(move |_tray, event| {
-                match event.id.as_ref() {
-                    "quit" => {
-                        APP_RUNNING.store(false, std::sync::atomic::Ordering::SeqCst);
-                    }
-                    "toggle" => {
-                        let current = MONITORING_ENABLED.load(std::sync::atomic::Ordering::SeqCst);
-                        MONITORING_ENABLED.store(!current, std::sync::atomic::Ordering::SeqCst);
-                    }
-                    "show" => {
-                        // Open config file location
-                        if let Some(path) = crate::config::Config::config_path() {
-                            let _ = std::process::Command::new("explorer")
-                                .arg("/select,")
-                                .arg(&path)
-                                .spawn();
-                        }
-                    }
-                    _ => {}
-                }
-            })
             .build()?;
 
         // Keep alive - tray icon stays until app exits
