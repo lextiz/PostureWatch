@@ -46,7 +46,7 @@ impl TrayManager {
 
         let _tray = TrayIconBuilder::new()
             .with_icon(icon)
-            .with_menu(menu)
+            .with_menu(Box::new(menu))
             .build()?;
 
         // Keep alive - tray icon stays until app exits
