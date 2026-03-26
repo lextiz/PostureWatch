@@ -80,39 +80,12 @@ If valid, score only posture alignment: \
 }
 
 fn parse_api_response(response_json: &serde_json::Value) -> Result<PostureStatus> {
-    if let Some(content) = extract_content_text(&response_json["choices"][0]["message"]["content"])
-    {
-        return parse_posture_status(&content);
+    if let Some(content) = response_json["choices"][0]["message"]["content"].as_str() {
+        return parse_posture_status(content);
     }
 
     log_error!("Could not parse API response: {:?}", response_json);
     anyhow::bail!("Could not parse API response");
-}
-
-fn extract_content_text(content: &serde_json::Value) -> Option<String> {
-    if let Some(text) = content.as_str() {
-        return Some(text.to_string());
-    }
-
-    let parts = content.as_array()?;
-    let mut merged = String::new();
-
-    for part in parts {
-        if part["type"].as_str() == Some("text") {
-            if let Some(text) = part["text"].as_str() {
-                if !merged.is_empty() {
-                    merged.push('\n');
-                }
-                merged.push_str(text);
-            }
-        }
-    }
-
-    if merged.is_empty() {
-        None
-    } else {
-        Some(merged)
-    }
 }
 
 fn parse_posture_status(content: &str) -> Result<PostureStatus> {
@@ -128,29 +101,8 @@ fn parse_posture_status(content: &str) -> Result<PostureStatus> {
         }
     }
 
-    if let Some(score) = extract_score_token(text) {
-        return Ok(PostureStatus::Score(score));
-    }
-
-    if has_no_person_token(text) {
-        return Ok(PostureStatus::NoPerson);
-    }
-
     log_error!("Unexpected LLM response: {}", content);
     anyhow::bail!("Unexpected response: {}", content);
-}
-
-fn extract_score_token(text: &str) -> Option<u32> {
-    text.split(|c: char| !c.is_ascii_alphanumeric())
-        .find_map(|token| match token.parse::<u32>() {
-            Ok(score) if (1..=10).contains(&score) => Some(score),
-            _ => None,
-        })
-}
-
-fn has_no_person_token(text: &str) -> bool {
-    text.split(|c: char| !c.is_ascii_alphanumeric())
-        .any(|token| token.eq_ignore_ascii_case("n"))
 }
 
 #[cfg(test)]
@@ -197,30 +149,6 @@ mod tests {
         assert_eq!(
             parse_api_response(&response_json).unwrap(),
             PostureStatus::Score(8)
-        );
-    }
-
-    #[test]
-    fn parse_api_response_supports_content_parts() {
-        let response_json = json!({
-            "choices": [{
-                "message": {
-                    "content": [{ "type": "text", "text": "7" }]
-                }
-            }]
-        });
-
-        assert_eq!(
-            parse_api_response(&response_json).unwrap(),
-            PostureStatus::Score(7)
-        );
-    }
-
-    #[test]
-    fn parse_status_accepts_number_with_extra_text() {
-        assert_eq!(
-            parse_posture_status("Posture score: 4").unwrap(),
-            PostureStatus::Score(4)
         );
     }
 
