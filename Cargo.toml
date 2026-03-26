@@ -4,6 +4,7 @@ name = "posturewatch"
 version = "0.1.0"
 edition = "2021"
 description = "Posture monitoring app with webcam and LLM"
+license = "MIT"
 
 [[bin]]
 name = "posturewatch"
