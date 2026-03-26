@@ -21,24 +21,27 @@ impl CameraState {
     }
 
     pub fn capture_frame(&mut self) -> Result<Vec<u8>> {
-        if self.camera.is_none() {
-            self.camera = Some(self.init_camera()?);
-        }
-
-        let cam = self.camera.as_mut().unwrap();
-        let frame = match cam.frame() {
-            Ok(f) => f,
-            Err(_) => {
-                self.camera = None;
-                std::thread::sleep(std::time::Duration::from_millis(500));
-                return self.capture_frame();
+        loop {
+            if self.camera.is_none() {
+                self.camera = Some(self.init_camera()?);
             }
-        };
 
-        let buffer = frame.buffer();
-        let (w, h) = (frame.resolution().width(), frame.resolution().height());
+            let Some(cam) = self.camera.as_mut() else {
+                continue;
+            };
 
-        self.convert_to_jpeg(buffer, w, h)
+            match cam.frame() {
+                Ok(frame) => {
+                    let buffer = frame.buffer();
+                    let (w, h) = (frame.resolution().width(), frame.resolution().height());
+                    return self.convert_to_jpeg(buffer, w, h);
+                }
+                Err(_) => {
+                    self.camera = None;
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                }
+            }
+        }
     }
 
     pub fn shutdown(&mut self) {
