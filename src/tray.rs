@@ -108,8 +108,8 @@ impl TrayManager {
         let cfg = Config::load();
         let mut window = nwg::Window::default();
         let mut api_key_input = nwg::TextInput::default();
-        let mut strictness_combo = nwg::ComboBox::<&str>::default();
-        let mut threshold_input = nwg::TextInput::default();
+        let mut posture_threshold_input = nwg::TextInput::default();
+        let mut alert_threshold_input = nwg::TextInput::default();
         let mut interval_input = nwg::TextInput::default();
         let mut desk_raise_check = nwg::CheckBox::default();
         let mut desk_raise_input = nwg::TextInput::default();
@@ -117,7 +117,7 @@ impl TrayManager {
         let mut cancel_button = nwg::Button::default();
 
         nwg::Window::builder()
-            .size((420, 260))
+            .size((420, 230))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -130,72 +130,74 @@ impl TrayManager {
         nwg::Label::builder()
             .text("API Key:")
             .position((20, 20))
-            .size((110, 22))
+            .size((120, 22))
             .parent(&window)
             .build(&mut label)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.api_key)
-            .position((140, 18))
-            .size((260, 22))
+            .position((150, 18))
+            .size((250, 22))
             .parent(&window)
             .build(&mut api_key_input)
             .ok();
 
-        // Strictness + Threshold on same row
+        // Posture threshold (1-10) + Alert threshold
         nwg::Label::builder()
-            .text("Strictness:")
+            .text("Posture threshold:")
             .position((20, 55))
-            .size((110, 22))
+            .size((120, 22))
             .parent(&window)
             .build(&mut label)
             .ok();
-        nwg::ComboBox::builder()
-            .collection(vec!["Low", "Medium", "High"])
-            .position((140, 53))
-            .size((100, 22))
+        nwg::TextInput::builder()
+            .text(&cfg.posture_threshold.to_string())
+            .position((150, 53))
+            .size((50, 22))
             .parent(&window)
-            .build(&mut strictness_combo)
+            .build(&mut posture_threshold_input)
             .ok();
-        strictness_combo.set_selection(Some(match cfg.strictness.as_str() {
-            "Low" => 0,
-            "High" => 2,
-            _ => 1,
-        }));
+        nwg::Label::builder()
+            .text("(1-10)")
+            .position((205, 55))
+            .size((45, 22))
+            .parent(&window)
+            .build(&mut label)
+            .ok();
 
         nwg::Label::builder()
-            .text("Threshold:")
-            .position((250, 55))
-            .size((70, 22))
+            .text("Alerts after:")
+            .position((260, 55))
+            .size((80, 22))
             .parent(&window)
             .build(&mut label)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.alert_threshold.to_string())
-            .position((330, 53))
-            .size((70, 22))
+            .position((345, 53))
+            .size((50, 22))
             .parent(&window)
-            .build(&mut threshold_input)
+            .build(&mut alert_threshold_input)
             .ok();
 
         // Check interval
         nwg::Label::builder()
             .text("Check interval:")
             .position((20, 90))
-            .size((110, 22))
+            .size((120, 22))
             .parent(&window)
             .build(&mut label)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.cycle_time_secs.to_string())
-            .position((140, 88))
-            .size((80, 22))
+            .position((150, 88))
+            .size((60, 22))
             .parent(&window)
             .build(&mut interval_input)
             .ok();
         nwg::Label::builder()
             .text("seconds (5-300)")
-            .position((230, 90))
+            .position((220, 90))
             .size((170, 22))
             .parent(&window)
             .build(&mut label)
@@ -217,13 +219,13 @@ impl TrayManager {
         nwg::TextInput::builder()
             .text(&cfg.desk_raise_interval_mins.to_string())
             .position((160, 125))
-            .size((60, 22))
+            .size((50, 22))
             .parent(&window)
             .build(&mut desk_raise_input)
             .ok();
         nwg::Label::builder()
             .text("minutes (1-480)")
-            .position((230, 127))
+            .position((220, 127))
             .size((170, 22))
             .parent(&window)
             .build(&mut label)
@@ -232,14 +234,14 @@ impl TrayManager {
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 200))
+            .position((200, 175))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 200))
+            .position((310, 175))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -250,16 +252,16 @@ impl TrayManager {
         let cancel_handle = cancel_button.handle;
 
         let api_key_input = Rc::new(RefCell::new(api_key_input));
-        let strictness_combo = Rc::new(RefCell::new(strictness_combo));
-        let threshold_input = Rc::new(RefCell::new(threshold_input));
+        let posture_threshold_input = Rc::new(RefCell::new(posture_threshold_input));
+        let alert_threshold_input = Rc::new(RefCell::new(alert_threshold_input));
         let interval_input = Rc::new(RefCell::new(interval_input));
         let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
 
-        let (ak, sc, th, ii, drc, dri) = (
+        let (ak, pt, at, ii, drc, dri) = (
             api_key_input.clone(),
-            strictness_combo.clone(),
-            threshold_input.clone(),
+            posture_threshold_input.clone(),
+            alert_threshold_input.clone(),
             interval_input.clone(),
             desk_raise_check.clone(),
             desk_raise_input.clone(),
@@ -267,17 +269,32 @@ impl TrayManager {
 
         let handler = nwg::full_bind_event_handler(&window_handle, move |evt, _, handle| {
             if evt == nwg::Event::OnButtonClick && handle == save_handle {
+                let posture_th: u32 = match pt.borrow().text().parse() {
+                    Ok(v) if (1..=10).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Posture threshold must be 1-10",
+                        );
+                        return;
+                    }
+                };
+                let alert_th: u32 = match at.borrow().text().parse() {
+                    Ok(v) if (1..=10).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Alert threshold must be 1-10",
+                        );
+                        return;
+                    }
+                };
                 let interval: u64 = match ii.borrow().text().parse() {
                     Ok(v) if (5..=300).contains(&v) => v,
                     _ => {
                         nwg::modal_info_message(&window_handle, "Error", "Interval must be 5-300");
-                        return;
-                    }
-                };
-                let threshold: u32 = match th.borrow().text().parse() {
-                    Ok(v) if (1..=10).contains(&v) => v,
-                    _ => {
-                        nwg::modal_info_message(&window_handle, "Error", "Threshold must be 1-10");
                         return;
                     }
                 };
@@ -295,9 +312,8 @@ impl TrayManager {
 
                 let mut new_cfg = Config::load();
                 new_cfg.api_key = ak.borrow().text();
-                new_cfg.strictness =
-                    ["Low", "Medium", "High"][sc.borrow().selection().unwrap_or(1)].to_string();
-                new_cfg.alert_threshold = threshold;
+                new_cfg.posture_threshold = posture_th;
+                new_cfg.alert_threshold = alert_th;
                 new_cfg.cycle_time_secs = interval;
                 new_cfg.desk_raise_enabled =
                     drc.borrow().check_state() == nwg::CheckBoxState::Checked;

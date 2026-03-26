@@ -25,7 +25,10 @@ async fn main() {
     let camera_state = TokioMutex::new(camera::CameraState::new());
     let config_arc = Arc::new(TokioMutex::new(config.clone()));
     let analyzer = PostureAnalyzer::new(config.clone());
-    let monitor = TokioMutex::new(MonitorLogic::new(config.alert_threshold));
+    let monitor = TokioMutex::new(MonitorLogic::new(
+        config.posture_threshold,
+        config.alert_threshold,
+    ));
     let mut last_desk_raise = Instant::now();
 
     tray::TrayManager::setup_tray(config_arc);
@@ -54,7 +57,10 @@ async fn main() {
                 if let AlertEvent::NotifyBadPosture = monitor_guard.process_status(status) {
                     alert::notify_bad_posture();
                 }
-                monitor_guard.set_threshold(current_config.alert_threshold);
+                monitor_guard.set_thresholds(
+                    current_config.posture_threshold,
+                    current_config.alert_threshold,
+                );
             }
         }
 

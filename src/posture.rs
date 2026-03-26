@@ -5,8 +5,7 @@ use reqwest::Client;
 use serde_json::json;
 
 pub enum PostureStatus {
-    Good,
-    Bad,
+    Score(u32),
     NoPerson,
 }
 
@@ -23,14 +22,6 @@ impl PostureAnalyzer {
         }
     }
 
-    fn strictness_guidance(&self) -> &'static str {
-        match self.config.strictness.to_lowercase().as_str() {
-            "high" => "Be strict. Flag clear problems: forward head, rounded shoulders, or slouching.",
-            "low" => "Be lenient. Only flag severe bad posture - extreme forward lean or obvious slouching.",
-            _ => "Be balanced. Flag clear bad posture. When in doubt, say Good.",
-        }
-    }
-
     pub async fn analyze(&self, image_data: &[u8]) -> Result<PostureStatus> {
         if self.config.api_key.is_empty() {
             anyhow::bail!("API key not configured");
@@ -38,11 +29,11 @@ impl PostureAnalyzer {
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
 
-        let prompt = format!(
-            "Analyze sitting posture. {}. If no person visible, reply 'NoPerson'. \
-            Reply ONLY: 'Good', 'Bad', or 'NoPerson'.",
-            self.strictness_guidance()
-        );
+        let prompt = "Rate the person's sitting posture from 1 to 10. \
+            1 = terrible posture (severe slouching, head far forward). \
+            10 = perfect posture (straight back, shoulders aligned). \
+            If no person is visible, reply 'N'. \
+            Reply with ONLY a single number (1-10) or 'N'.";
 
         let body = json!({
             "model": self.config.model,
@@ -53,7 +44,7 @@ impl PostureAnalyzer {
                     { "type": "image_url", "image_url": { "url": format!("data:image/jpeg;base64,{}", base64_image) } }
                 ]
             }],
-            "max_tokens": 10,
+            "max_tokens": 5,
             "temperature": 0
         });
 
@@ -74,13 +65,14 @@ impl PostureAnalyzer {
         let json: serde_json::Value = resp.json().await?;
 
         if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
-            let text = content.to_lowercase();
-            if text.starts_with("good") {
-                return Ok(PostureStatus::Good);
-            } else if text.starts_with("bad") {
-                return Ok(PostureStatus::Bad);
-            } else if text.starts_with("noperson") {
+            let text = content.trim();
+            if text.eq_ignore_ascii_case("n") {
                 return Ok(PostureStatus::NoPerson);
+            }
+            if let Ok(score) = text.parse::<u32>() {
+                if (1..=10).contains(&score) {
+                    return Ok(PostureStatus::Score(score));
+                }
             }
             anyhow::bail!("Unexpected response: {}", content);
         }

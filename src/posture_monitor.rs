@@ -5,32 +5,40 @@ pub enum AlertEvent {
 
 pub struct MonitorLogic {
     consecutive_bad: u32,
-    threshold: u32,
+    posture_threshold: u32,
+    alert_threshold: u32,
 }
 
 impl MonitorLogic {
-    pub fn new(threshold: u32) -> Self {
+    pub fn new(posture_threshold: u32, alert_threshold: u32) -> Self {
         Self {
             consecutive_bad: 0,
-            threshold: threshold.max(1),
+            posture_threshold: posture_threshold.clamp(1, 10),
+            alert_threshold: alert_threshold.max(1),
         }
     }
 
-    pub fn set_threshold(&mut self, threshold: u32) {
-        self.threshold = threshold.max(1);
+    pub fn set_thresholds(&mut self, posture_threshold: u32, alert_threshold: u32) {
+        self.posture_threshold = posture_threshold.clamp(1, 10);
+        self.alert_threshold = alert_threshold.max(1);
     }
 
     pub fn process_status(&mut self, status: super::posture::PostureStatus) -> AlertEvent {
         match status {
-            super::posture::PostureStatus::Bad => {
-                self.consecutive_bad += 1;
-                if self.consecutive_bad >= self.threshold {
-                    AlertEvent::NotifyBadPosture
+            super::posture::PostureStatus::Score(score) => {
+                if score < self.posture_threshold {
+                    self.consecutive_bad += 1;
+                    if self.consecutive_bad >= self.alert_threshold {
+                        AlertEvent::NotifyBadPosture
+                    } else {
+                        AlertEvent::None
+                    }
                 } else {
+                    self.consecutive_bad = 0;
                     AlertEvent::None
                 }
             }
-            super::posture::PostureStatus::Good | super::posture::PostureStatus::NoPerson => {
+            super::posture::PostureStatus::NoPerson => {
                 self.consecutive_bad = 0;
                 AlertEvent::None
             }
@@ -44,57 +52,61 @@ mod tests {
     use crate::posture::PostureStatus;
 
     #[test]
-    fn test_threshold_2_alerts_on_second_bad() {
-        let mut logic = MonitorLogic::new(2);
+    fn test_score_below_threshold_triggers_alert() {
+        let mut logic = MonitorLogic::new(5, 2);
 
         assert!(matches!(
-            logic.process_status(PostureStatus::Good),
+            logic.process_status(PostureStatus::Score(7)),
             AlertEvent::None
         ));
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(4)),
             AlertEvent::None
         ));
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(3)),
             AlertEvent::NotifyBadPosture
         ));
     }
 
     #[test]
-    fn test_threshold_1_alerts_immediately() {
-        let mut logic = MonitorLogic::new(1);
+    fn test_score_at_threshold_is_good() {
+        let mut logic = MonitorLogic::new(5, 1);
 
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(5)),
+            AlertEvent::None
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(4)),
             AlertEvent::NotifyBadPosture
         ));
     }
 
     #[test]
-    fn test_threshold_3_alerts_on_third_bad() {
-        let mut logic = MonitorLogic::new(3);
+    fn test_good_score_resets_counter() {
+        let mut logic = MonitorLogic::new(5, 2);
 
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(3)),
             AlertEvent::None
         ));
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(6)),
             AlertEvent::None
         ));
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
-            AlertEvent::NotifyBadPosture
+            logic.process_status(PostureStatus::Score(3)),
+            AlertEvent::None
         ));
     }
 
     #[test]
     fn test_no_person_resets_counter() {
-        let mut logic = MonitorLogic::new(2);
+        let mut logic = MonitorLogic::new(5, 2);
 
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(3)),
             AlertEvent::None
         ));
         assert!(matches!(
@@ -102,17 +114,8 @@ mod tests {
             AlertEvent::None
         ));
         assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
+            logic.process_status(PostureStatus::Score(3)),
             AlertEvent::None
-        ));
-    }
-
-    #[test]
-    fn test_threshold_zero_becomes_one() {
-        let mut logic = MonitorLogic::new(0);
-        assert!(matches!(
-            logic.process_status(PostureStatus::Bad),
-            AlertEvent::NotifyBadPosture
         ));
     }
 }
