@@ -59,7 +59,8 @@ jobs:
         with:
           files: codecov.json
           fail_ci_if_error: true
-          use_oidc: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: lextiz/PostureWatch
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
