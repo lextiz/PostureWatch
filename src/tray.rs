@@ -1,13 +1,21 @@
 use crate::config::Config;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
-#[cfg(windows)]
-use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU32;
 
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
+static LAST_POSTURE_SCORE: AtomicU32 = AtomicU32::new(0);
+
+pub fn set_current_posture_status(status: &crate::posture::PostureStatus) {
+    let score = match status {
+        crate::posture::PostureStatus::Score(score) => *score,
+        crate::posture::PostureStatus::NoPerson => 0,
+    };
+    LAST_POSTURE_SCORE.store(score, Ordering::SeqCst);
+}
 
 pub struct TrayManager;
 
@@ -39,11 +47,12 @@ impl TrayManager {
             &MenuItem::with_id("exit", "Exit", true, None),
         ])?;
 
-        let _tray = TrayIconBuilder::new()
+        let tray = TrayIconBuilder::new()
             .with_icon(icon)
             .with_menu(Box::new(menu))
             .with_tooltip("PostureWatch")
             .build()?;
+        let mut last_tooltip_state = (u32::MAX, false);
 
         let menu_channel = MenuEvent::receiver();
 
@@ -69,6 +78,22 @@ impl TrayManager {
 
                 if !APP_RUNNING.load(Ordering::SeqCst) {
                     break;
+                }
+
+                let score = LAST_POSTURE_SCORE.load(Ordering::SeqCst);
+                let monitoring_enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
+                if last_tooltip_state != (score, monitoring_enabled) {
+                    let tooltip = if monitoring_enabled {
+                        if score == 0 {
+                            "PostureWatch | Score: n/a".to_string()
+                        } else {
+                            format!("PostureWatch | Score: {score}/10")
+                        }
+                    } else {
+                        "PostureWatch (Paused)".to_string()
+                    };
+                    let _ = tray.set_tooltip(Some(tooltip));
+                    last_tooltip_state = (score, monitoring_enabled);
                 }
 
                 while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
