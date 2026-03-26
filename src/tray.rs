@@ -109,12 +109,15 @@ impl TrayManager {
         let mut window = nwg::Window::default();
         let mut api_key_input = nwg::TextInput::default();
         let mut strictness_combo = nwg::ComboBox::<&str>::default();
+        let mut threshold_input = nwg::TextInput::default();
         let mut interval_input = nwg::TextInput::default();
+        let mut desk_raise_check = nwg::CheckBox::default();
+        let mut desk_raise_input = nwg::TextInput::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
 
         nwg::Window::builder()
-            .size((420, 200))
+            .size((420, 260))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -122,6 +125,8 @@ impl TrayManager {
             .ok();
 
         let mut label = nwg::Label::default();
+
+        // API Key
         nwg::Label::builder()
             .text("API Key:")
             .position((20, 20))
@@ -137,6 +142,7 @@ impl TrayManager {
             .build(&mut api_key_input)
             .ok();
 
+        // Strictness + Threshold on same row
         nwg::Label::builder()
             .text("Strictness:")
             .position((20, 55))
@@ -147,7 +153,7 @@ impl TrayManager {
         nwg::ComboBox::builder()
             .collection(vec!["Low", "Medium", "High"])
             .position((140, 53))
-            .size((260, 22))
+            .size((100, 22))
             .parent(&window)
             .build(&mut strictness_combo)
             .ok();
@@ -158,7 +164,23 @@ impl TrayManager {
         }));
 
         nwg::Label::builder()
-            .text("Interval:")
+            .text("Threshold:")
+            .position((250, 55))
+            .size((70, 22))
+            .parent(&window)
+            .build(&mut label)
+            .ok();
+        nwg::TextInput::builder()
+            .text(&cfg.alert_threshold.to_string())
+            .position((330, 53))
+            .size((70, 22))
+            .parent(&window)
+            .build(&mut threshold_input)
+            .ok();
+
+        // Check interval
+        nwg::Label::builder()
+            .text("Check interval:")
             .position((20, 90))
             .size((110, 22))
             .parent(&window)
@@ -179,16 +201,45 @@ impl TrayManager {
             .build(&mut label)
             .ok();
 
+        // Stand reminder
+        nwg::CheckBox::builder()
+            .text("Stand reminder")
+            .position((20, 125))
+            .size((130, 22))
+            .parent(&window)
+            .check_state(if cfg.desk_raise_enabled {
+                nwg::CheckBoxState::Checked
+            } else {
+                nwg::CheckBoxState::Unchecked
+            })
+            .build(&mut desk_raise_check)
+            .ok();
+        nwg::TextInput::builder()
+            .text(&cfg.desk_raise_interval_mins.to_string())
+            .position((160, 125))
+            .size((60, 22))
+            .parent(&window)
+            .build(&mut desk_raise_input)
+            .ok();
+        nwg::Label::builder()
+            .text("minutes (1-480)")
+            .position((230, 127))
+            .size((170, 22))
+            .parent(&window)
+            .build(&mut label)
+            .ok();
+
+        // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 140))
+            .position((200, 200))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 140))
+            .position((310, 200))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -200,12 +251,18 @@ impl TrayManager {
 
         let api_key_input = Rc::new(RefCell::new(api_key_input));
         let strictness_combo = Rc::new(RefCell::new(strictness_combo));
+        let threshold_input = Rc::new(RefCell::new(threshold_input));
         let interval_input = Rc::new(RefCell::new(interval_input));
+        let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
+        let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
 
-        let (ak, sc, ii) = (
+        let (ak, sc, th, ii, drc, dri) = (
             api_key_input.clone(),
             strictness_combo.clone(),
+            threshold_input.clone(),
             interval_input.clone(),
+            desk_raise_check.clone(),
+            desk_raise_input.clone(),
         );
 
         let handler = nwg::full_bind_event_handler(&window_handle, move |evt, _, handle| {
@@ -217,11 +274,35 @@ impl TrayManager {
                         return;
                     }
                 };
+                let threshold: u32 = match th.borrow().text().parse() {
+                    Ok(v) if (1..=10).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(&window_handle, "Error", "Threshold must be 1-10");
+                        return;
+                    }
+                };
+                let desk_mins: u64 = match dri.borrow().text().parse() {
+                    Ok(v) if (1..=480).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Stand reminder must be 1-480 minutes",
+                        );
+                        return;
+                    }
+                };
+
                 let mut new_cfg = Config::load();
                 new_cfg.api_key = ak.borrow().text();
                 new_cfg.strictness =
                     ["Low", "Medium", "High"][sc.borrow().selection().unwrap_or(1)].to_string();
+                new_cfg.alert_threshold = threshold;
                 new_cfg.cycle_time_secs = interval;
+                new_cfg.desk_raise_enabled =
+                    drc.borrow().check_state() == nwg::CheckBoxState::Checked;
+                new_cfg.desk_raise_interval_mins = desk_mins;
+
                 if new_cfg.save().is_ok() {
                     nwg::modal_info_message(&window_handle, "Saved", "Settings saved.");
                 }

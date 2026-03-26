@@ -3,53 +3,28 @@ pub enum AlertEvent {
     NotifyBadPosture,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum Strictness {
-    Low,
-    Medium,
-    High,
-}
-
-impl Strictness {
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
-            "low" => Self::Low,
-            "high" => Self::High,
-            _ => Self::Medium,
-        }
-    }
-
-    fn threshold(self) -> u32 {
-        match self {
-            Self::Low => 3,
-            Self::Medium => 2,
-            Self::High => 1,
-        }
-    }
-}
-
 pub struct MonitorLogic {
     consecutive_bad: u32,
-    strictness: Strictness,
+    threshold: u32,
 }
 
 impl MonitorLogic {
-    pub fn new(strictness: Strictness) -> Self {
+    pub fn new(threshold: u32) -> Self {
         Self {
             consecutive_bad: 0,
-            strictness,
+            threshold: threshold.max(1),
         }
     }
 
-    pub fn set_strictness(&mut self, strictness: Strictness) {
-        self.strictness = strictness;
+    pub fn set_threshold(&mut self, threshold: u32) {
+        self.threshold = threshold.max(1);
     }
 
     pub fn process_status(&mut self, status: super::posture::PostureStatus) -> AlertEvent {
         match status {
             super::posture::PostureStatus::Bad => {
                 self.consecutive_bad += 1;
-                if self.consecutive_bad >= self.strictness.threshold() {
+                if self.consecutive_bad >= self.threshold {
                     AlertEvent::NotifyBadPosture
                 } else {
                     AlertEvent::None
@@ -69,8 +44,8 @@ mod tests {
     use crate::posture::PostureStatus;
 
     #[test]
-    fn test_medium_strictness_alerts_on_second_bad() {
-        let mut logic = MonitorLogic::new(Strictness::Medium);
+    fn test_threshold_2_alerts_on_second_bad() {
+        let mut logic = MonitorLogic::new(2);
 
         assert!(matches!(
             logic.process_status(PostureStatus::Good),
@@ -87,8 +62,8 @@ mod tests {
     }
 
     #[test]
-    fn test_high_strictness_alerts_immediately() {
-        let mut logic = MonitorLogic::new(Strictness::High);
+    fn test_threshold_1_alerts_immediately() {
+        let mut logic = MonitorLogic::new(1);
 
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
@@ -97,8 +72,8 @@ mod tests {
     }
 
     #[test]
-    fn test_low_strictness_alerts_on_third_bad() {
-        let mut logic = MonitorLogic::new(Strictness::Low);
+    fn test_threshold_3_alerts_on_third_bad() {
+        let mut logic = MonitorLogic::new(3);
 
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
@@ -116,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_no_person_resets_counter() {
-        let mut logic = MonitorLogic::new(Strictness::Medium);
+        let mut logic = MonitorLogic::new(2);
 
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
@@ -129,6 +104,15 @@ mod tests {
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::None
+        ));
+    }
+
+    #[test]
+    fn test_threshold_zero_becomes_one() {
+        let mut logic = MonitorLogic::new(0);
+        assert!(matches!(
+            logic.process_status(PostureStatus::Bad),
+            AlertEvent::NotifyBadPosture
         ));
     }
 }

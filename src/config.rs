@@ -9,8 +9,10 @@ pub struct Config {
     pub model: String,
     pub api_key: String,
     pub cycle_time_secs: u64,
-    pub desk_raise_interval_secs: u64,
     pub strictness: String,
+    pub alert_threshold: u32,
+    pub desk_raise_enabled: bool,
+    pub desk_raise_interval_mins: u64,
 }
 
 impl Default for Config {
@@ -20,8 +22,10 @@ impl Default for Config {
             model: "gpt-4o-mini".to_string(),
             api_key: String::new(),
             cycle_time_secs: 10,
-            desk_raise_interval_secs: 3600,
             strictness: "Medium".to_string(),
+            alert_threshold: 2,
+            desk_raise_enabled: true,
+            desk_raise_interval_mins: 60,
         }
     }
 }

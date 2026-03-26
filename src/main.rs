@@ -9,7 +9,7 @@ mod tray;
 
 use config::Config;
 use posture::PostureAnalyzer;
-use posture_monitor::{AlertEvent, MonitorLogic, Strictness};
+use posture_monitor::{AlertEvent, MonitorLogic};
 use tray::{APP_RUNNING, MONITORING_ENABLED};
 
 use std::sync::atomic::Ordering;
@@ -21,12 +21,11 @@ use tokio::time::{sleep, Duration};
 #[tokio::main]
 async fn main() {
     let config = Config::load();
-    let strictness = Strictness::from_str(&config.strictness);
 
     let camera_state = TokioMutex::new(camera::CameraState::new());
     let config_arc = Arc::new(TokioMutex::new(config.clone()));
     let analyzer = PostureAnalyzer::new(config.clone());
-    let monitor = TokioMutex::new(MonitorLogic::new(strictness));
+    let monitor = TokioMutex::new(MonitorLogic::new(config.alert_threshold));
     let mut last_desk_raise = Instant::now();
 
     tray::TrayManager::setup_tray(config_arc);
@@ -39,9 +38,12 @@ async fn main() {
 
         let current_config = Config::load();
 
-        if last_desk_raise.elapsed().as_secs() >= current_config.desk_raise_interval_secs {
-            alert::notify_desk_raise();
-            last_desk_raise = Instant::now();
+        if current_config.desk_raise_enabled {
+            let interval_secs = current_config.desk_raise_interval_mins * 60;
+            if last_desk_raise.elapsed().as_secs() >= interval_secs {
+                alert::notify_desk_raise();
+                last_desk_raise = Instant::now();
+            }
         }
 
         let mut camera_guard = camera_state.lock().await;
@@ -52,7 +54,7 @@ async fn main() {
                 if let AlertEvent::NotifyBadPosture = monitor_guard.process_status(status) {
                     alert::notify_bad_posture();
                 }
-                monitor_guard.set_strictness(Strictness::from_str(&current_config.strictness));
+                monitor_guard.set_threshold(current_config.alert_threshold);
             }
         }
 

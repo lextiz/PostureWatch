@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::posture_monitor::Strictness;
 use anyhow::Result;
 use base64::Engine;
 use reqwest::Client;
@@ -14,16 +13,21 @@ pub enum PostureStatus {
 pub struct PostureAnalyzer {
     client: Client,
     config: Config,
-    strictness: Strictness,
 }
 
 impl PostureAnalyzer {
     pub fn new(config: Config) -> Self {
-        let strictness = Strictness::from_str(&config.strictness);
         Self {
             client: Client::new(),
             config,
-            strictness,
+        }
+    }
+
+    fn strictness_guidance(&self) -> &'static str {
+        match self.config.strictness.to_lowercase().as_str() {
+            "high" => "Be strict. Flag clear problems: forward head, rounded shoulders, or slouching.",
+            "low" => "Be lenient. Only flag severe bad posture - extreme forward lean or obvious slouching.",
+            _ => "Be balanced. Flag clear bad posture. When in doubt, say Good.",
         }
     }
 
@@ -34,16 +38,10 @@ impl PostureAnalyzer {
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
 
-        let strictness_guidance = match self.strictness {
-            Strictness::High => "Be strict. Flag clear problems: forward head, rounded shoulders, or slouching.",
-            Strictness::Medium => "Be balanced. Flag clear bad posture. When in doubt, say Good.",
-            Strictness::Low => "Be lenient. Only flag severe bad posture - extreme forward lean or obvious slouching.",
-        };
-
         let prompt = format!(
             "Analyze sitting posture. {}. If no person visible, reply 'NoPerson'. \
             Reply ONLY: 'Good', 'Bad', or 'NoPerson'.",
-            strictness_guidance
+            self.strictness_guidance()
         );
 
         let body = json!({
