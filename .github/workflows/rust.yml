@@ -65,28 +65,28 @@ jobs:
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install release tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
 
       - name: Build release (exe)
-        run: cargo build --release --target x86_64-pc-windows-gnu
+        run: cargo build --release
 
       - name: Prepare release artifact
+        shell: pwsh
         run: |
-          cp target/x86_64-pc-windows-gnu/release/posturewatch.exe PostureWatch.exe 2>/dev/null || cp target/x86_64-pc-windows-gnu/release/PostureWatch.exe PostureWatch.exe
+          if (Test-Path target/release/posturewatch.exe) {
+            Copy-Item target/release/posturewatch.exe PostureWatch.exe
+          } elseif (Test-Path target/release/PostureWatch.exe) {
+            Copy-Item target/release/PostureWatch.exe PostureWatch.exe
+          } else {
+            throw 'Could not find release executable in target/release'
+          }
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
