@@ -25,7 +25,7 @@ impl TrayManager {
     #[cfg(windows)]
     fn run_tray_loop(config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
         use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
-        use tray_icon::{Icon, TrayIconBuilder};
+        use tray_icon::TrayIconBuilder;
 
         let icon = Self::create_icon()?;
 
@@ -103,7 +103,7 @@ impl TrayManager {
 
     #[cfg(windows)]
     fn show_configure_dialog(_config: &Arc<TokioMutex<Config>>) {
-        use native_dialog::{MessageDialog, MessageType};
+        use native_dialog::{DialogBuilder, MessageLevel};
 
         // Load current config synchronously (we reload to get latest values)
         let current_config = Config::load();
@@ -154,11 +154,12 @@ impl TrayManager {
         let interval_secs: u64 = match interval_str.parse() {
             Ok(v) if (5..=300).contains(&v) => v,
             _ => {
-                let _ = MessageDialog::new()
-                    .set_type(MessageType::Error)
+                let _ = DialogBuilder::message()
+                    .set_level(MessageLevel::Error)
                     .set_title("Invalid Input")
                     .set_text("Interval must be a number between 5 and 300 seconds.")
-                    .show_alert();
+                    .alert()
+                    .show();
                 return;
             }
         };
@@ -170,17 +171,19 @@ impl TrayManager {
         new_config.cycle_time_secs = interval_secs;
 
         if let Err(e) = new_config.save() {
-            let _ = MessageDialog::new()
-                .set_type(MessageType::Error)
+            let _ = DialogBuilder::message()
+                .set_level(MessageLevel::Error)
                 .set_title("Save Error")
                 .set_text(&format!("Failed to save configuration: {}", e))
-                .show_alert();
+                .alert()
+                .show();
         } else {
-            let _ = MessageDialog::new()
-                .set_type(MessageType::Info)
+            let _ = DialogBuilder::message()
+                .set_level(MessageLevel::Info)
                 .set_title("Configuration Saved")
                 .set_text("Settings have been saved successfully.")
-                .show_alert();
+                .alert()
+                .show();
         }
     }
 
@@ -222,7 +225,7 @@ Write-Output $result
         options: &[&str],
         default_idx: usize,
     ) -> Option<String> {
-        use native_dialog::{MessageDialog, MessageType};
+        use native_dialog::{DialogBuilder, MessageLevel};
 
         // Build options string
         let options_text = options
@@ -246,32 +249,34 @@ Write-Output $result
         if idx >= 1 && idx <= options.len() {
             Some(options[idx - 1].to_string())
         } else {
-            let _ = MessageDialog::new()
-                .set_type(MessageType::Error)
+            let _ = DialogBuilder::message()
+                .set_level(MessageLevel::Error)
                 .set_title("Invalid Selection")
                 .set_text(&format!(
                     "Please enter a number between 1 and {}",
                     options.len()
                 ))
-                .show_alert();
+                .alert()
+                .show();
             None
         }
     }
 
     #[cfg(windows)]
     fn show_about_dialog() {
-        use native_dialog::{MessageDialog, MessageType};
+        use native_dialog::{DialogBuilder, MessageLevel};
 
-        let _ = MessageDialog::new()
-            .set_type(MessageType::Info)
+        let _ = DialogBuilder::message()
+            .set_level(MessageLevel::Info)
             .set_title("About PostureWatch")
             .set_text(
-                "PostureWatch v0.1.0\n\n\
+                "PostureWatch v1.0.3\n\n\
                 A posture monitoring application that uses your webcam\n\
                 and AI to help you maintain good posture.\n\n\
                 © 2024 PostureWatch",
             )
-            .show_alert();
+            .alert()
+            .show();
     }
 
     #[cfg(not(windows))]
