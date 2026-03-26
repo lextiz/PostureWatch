@@ -240,7 +240,7 @@ impl TrayManager {
 
         // Use Yes/No/Cancel to select: Yes=Low, No=Medium, Cancel handled separately
         let result = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Strictness Level")
             .set_text(&msg)
             .confirm()
@@ -257,7 +257,7 @@ impl TrayManager {
 
         // Better approach: Sequential dialogs
         let use_low = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Strictness: Low?")
             .set_text(&format!(
                 "Current: {}\n\n\
@@ -275,7 +275,7 @@ impl TrayManager {
         }
 
         let use_medium = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Strictness: Medium?")
             .set_text(
                 "Set strictness to MEDIUM?\n\
@@ -299,7 +299,7 @@ impl TrayManager {
 
         // Offer preset intervals
         let use_10 = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Monitoring Interval")
             .set_text(&format!(
                 "Current interval: {} seconds\n\n\
@@ -317,7 +317,7 @@ impl TrayManager {
         }
 
         let use_30 = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Monitoring Interval")
             .set_text(
                 "Set interval to 30 seconds?\n\n\
@@ -332,7 +332,7 @@ impl TrayManager {
         }
 
         let use_60 = DialogBuilder::message()
-            .set_level(MessageLevel::Question)
+            .set_level(MessageLevel::Info)
             .set_title("Monitoring Interval")
             .set_text(
                 "Set interval to 60 seconds (1 minute)?\n\n\
