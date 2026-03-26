@@ -1,5 +1,9 @@
 # Contributing
 
+## Working together
+
+Please be kind, constructive, and respectful. This project is open source, and a friendly tone makes it easier for people to contribute. If you would like to make an non-trivial contribution please open an issue beforehand.
+
 ## Architecture
 - **Camera module:** Captures JPEG-encoded RGB frames from the system webcam.
 - **Posture analyzer:** Sends frames to a remote vision LLM (for example, OpenAI) via `reqwest` and parses only `"Good"` or `"Bad"`.
