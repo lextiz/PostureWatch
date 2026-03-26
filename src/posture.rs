@@ -157,4 +157,18 @@ mod tests {
         let response_json = json!({"choices": []});
         assert!(parse_api_response(&response_json).is_err());
     }
+
+    #[tokio::test]
+    async fn analyze_errors_when_api_key_missing() {
+        let analyzer = PostureAnalyzer::new();
+        let config = Config {
+            api_key: String::new(),
+            ..Config::default()
+        };
+        let err = analyzer
+            .analyze(&[0xFF, 0xD8, 0xFF, 0xD9], &config)
+            .await
+            .expect_err("missing api key should return an error");
+        assert!(err.to_string().contains("API key not configured"));
+    }
 }

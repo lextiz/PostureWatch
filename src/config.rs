@@ -91,6 +91,17 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::Config;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic")
+            .as_nanos();
+        std::env::temp_dir().join(format!("posturewatch-{name}-{nanos}"))
+    }
 
     #[test]
     fn default_thresholds_are_valid() {
@@ -119,5 +130,49 @@ mod tests {
             parsed.desk_raise_interval_mins,
             default_config.desk_raise_interval_mins
         );
+    }
+
+    #[test]
+    fn config_path_prefers_existing_appdata_location() {
+        let appdata_root = unique_temp_dir("appdata-pref");
+        let user_config = appdata_root
+            .join("com.posturewatch")
+            .join("PostureWatch")
+            .join("config.toml");
+        fs::create_dir_all(
+            user_config
+                .parent()
+                .expect("user config file should have parent dir"),
+        )
+        .expect("create appdata directory");
+        fs::write(&user_config, "model = 'test'").expect("write user config");
+
+        std::env::set_var("APPDATA", &appdata_root);
+        let resolved = Config::config_path().expect("config path should resolve");
+        assert_eq!(resolved, user_config);
+    }
+
+    #[test]
+    fn load_returns_default_when_toml_invalid() {
+        let appdata_root = unique_temp_dir("appdata-invalid");
+        let user_config = appdata_root
+            .join("com.posturewatch")
+            .join("PostureWatch")
+            .join("config.toml");
+        fs::create_dir_all(
+            user_config
+                .parent()
+                .expect("user config file should have parent dir"),
+        )
+        .expect("create appdata directory");
+        fs::write(&user_config, "not valid toml = [").expect("write invalid config");
+
+        std::env::set_var("APPDATA", &appdata_root);
+        let loaded = Config::load();
+        assert_eq!(loaded.model, Config::default().model);
+
+        let rewritten = fs::read_to_string(&user_config).expect("read rewritten config");
+        let reparsed: Config = toml::from_str(&rewritten).expect("rewritten config should parse");
+        assert_eq!(reparsed.model, Config::default().model);
     }
 }

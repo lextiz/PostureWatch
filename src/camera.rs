@@ -196,3 +196,78 @@ impl CameraState {
         Ok(cam)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn yuyv_to_rgb_converts_two_pixels() {
+        let state = CameraState::new();
+        let yuyv = [100_u8, 128_u8, 150_u8, 128_u8];
+        let rgb = state
+            .yuyv_to_rgb(&yuyv)
+            .expect("yuyv conversion should succeed");
+        assert_eq!(rgb.len(), 6);
+        assert_eq!(rgb[0], 100);
+        assert_eq!(rgb[1], 100);
+        assert_eq!(rgb[2], 100);
+        assert_eq!(rgb[3], 150);
+        assert_eq!(rgb[4], 150);
+        assert_eq!(rgb[5], 150);
+    }
+
+    #[test]
+    fn yuyv_to_rgb_rejects_partial_chunks() {
+        let state = CameraState::new();
+        assert!(state.yuyv_to_rgb(&[1, 2, 3]).is_none());
+    }
+
+    #[test]
+    fn shutdown_without_camera_is_safe() {
+        let mut state = CameraState::new();
+        state.shutdown();
+    }
+
+    #[test]
+    fn yuv420_to_rgb_converts_minimal_frame() {
+        let state = CameraState::new();
+        let y_plane = [100_u8, 100_u8, 100_u8, 100_u8];
+        let u_plane = [128_u8];
+        let v_plane = [128_u8];
+        let mut input = Vec::new();
+        input.extend_from_slice(&y_plane);
+        input.extend_from_slice(&u_plane);
+        input.extend_from_slice(&v_plane);
+
+        let rgb = state
+            .yuv420_to_rgb(&input, 2, 2)
+            .expect("yuv420 conversion should succeed");
+        assert_eq!(
+            rgb,
+            vec![100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+        );
+    }
+
+    #[test]
+    fn yuv420_to_rgb_rejects_short_input() {
+        let state = CameraState::new();
+        assert!(state.yuv420_to_rgb(&[0, 0, 0], 2, 2).is_none());
+    }
+
+    #[test]
+    fn convert_to_jpeg_handles_rgb_and_errors_on_unknown() {
+        let state = CameraState::new();
+        let rgb = vec![255_u8, 0_u8, 0_u8, 0_u8, 255_u8, 0_u8];
+        let jpeg = state
+            .convert_to_jpeg(&rgb, 2, 1)
+            .expect("rgb should convert to jpeg");
+        assert!(!jpeg.is_empty());
+        assert_eq!(&jpeg[0..2], &[0xFF, 0xD8]);
+
+        let err = state
+            .convert_to_jpeg(&[1, 2, 3, 4, 5], 2, 2)
+            .expect_err("unknown buffer format should fail");
+        assert!(err.to_string().contains("Unknown format"));
+    }
+}
