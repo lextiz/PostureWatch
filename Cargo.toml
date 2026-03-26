@@ -34,6 +34,8 @@ tray-icon = "0.16"
 winrt-notification = "0.5"
 native-dialog = "0.9"
 windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }
+native-windows-gui = "1.0"
+native-windows-derive = "1.0"
 
 [target.'cfg(not(windows))'.dependencies]
 notify-rust = "4.10"
