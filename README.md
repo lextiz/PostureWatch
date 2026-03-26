@@ -22,7 +22,8 @@ It periodically checks your posture using your webcam and an LLM endpoint. If yo
 - Code and prompts review
 - Break reminder with repeating alert reminder
 - Legal note, friendly installer and MVP publish
+- Icon should reflect monitoring status, tooltip: time at PC (today, current session), current posture score
 - Screen frame warning
 - Prompts customization
 - OS portability
-- Local model campagin
+- Local model
