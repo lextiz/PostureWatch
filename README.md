@@ -1,5 +1,8 @@
 # PostureWatch
 
+[![CI & Release](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml/badge.svg)](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml)
+[![codecov](https://codecov.io/gh/lextiz/PostureWatch/graph/badge.svg)](https://codecov.io/gh/lextiz/PostureWatch)
+
 PostureWatch is a basic posture/screen time monitoring and alert application.
 It periodically checks your posture using your webcam and an LLM endpoint. If your posture degrades or you did not have a break for too long you are forced to improve with annoying alerts.
 

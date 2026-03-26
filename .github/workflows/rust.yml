@@ -1,71 +1,102 @@
-name: Rust CI
+name: CI & Release
 
 on:
-  push:
-    branches: [ "main" ]
-    tags:
-      - 'v*'
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  push:
+    branches: ["main"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  fmt:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            libclang-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libswscale-dev \
+            libavutil-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libgdk-pixbuf2.0-dev \
+            libv4l-dev
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Check formatting
         run: cargo fmt -- --check
 
-  clippy:
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run coverage validation
+        run: cargo llvm-cov --ignore-filename-regex "src/(main|camera|tray|alert|logging)\\.rs" --fail-under-lines 80 --codecov --output-path codecov.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: codecov.json
+          fail_ci_if_error: true
+          use_oidc: true
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies (Linux)
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev clang libavcodec-dev libavformat-dev libswscale-dev libavutil-dev libglib2.0-dev libgtk-3-dev libgdk-pixbuf2.0-dev libv4l-dev
+      - name: Install release tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 zip
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          targets: x86_64-pc-windows-gnu
 
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
+      - name: Build release (exe)
+        run: cargo build --release --target x86_64-pc-windows-gnu
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Package for Windows
+        run: |
+          mkdir -p release
+          cp target/x86_64-pc-windows-gnu/release/posturewatch.exe release/ 2>/dev/null || cp target/x86_64-pc-windows-gnu/release/PostureWatch.exe release/
+          echo '@echo off' > release/install.bat
+          echo 'echo PostureWatch Installer' >> release/install.bat
+          echo 'echo Please run posturewatch.exe to start' >> release/install.bat
+          echo 'pause' >> release/install.bat
+          zip -r PostureWatch-Windows.zip release/
 
-      - name: Install dependencies (Linux)
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev clang libavcodec-dev libavformat-dev libswscale-dev libavutil-dev libglib2.0-dev libgtk-3-dev libgdk-pixbuf2.0-dev libv4l-dev
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run tests
-        run: cargo test --verbose
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies (Linux)
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev clang libavcodec-dev libavformat-dev libswscale-dev libavutil-dev libglib2.0-dev libgtk-3-dev libgdk-pixbuf2.0-dev libv4l-dev
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Build
-        run: cargo build --verbose
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: main-${{ github.run_number }}
+          name: Main build #${{ github.run_number }}
+          generate_release_notes: true
+          files: PostureWatch-Windows.zip
