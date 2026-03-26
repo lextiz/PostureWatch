@@ -382,3 +382,17 @@ impl TrayManager {
     #[cfg(not(windows))]
     pub fn setup_tray(_config: Arc<TokioMutex<Config>>) {}
 }
+
+#[cfg(all(test, not(windows)))]
+mod tests {
+    use super::TrayManager;
+    use crate::config::Config;
+    use std::sync::Arc;
+    use tokio::sync::Mutex as TokioMutex;
+
+    #[test]
+    fn setup_tray_is_noop_on_non_windows() {
+        let config = Arc::new(TokioMutex::new(Config::default()));
+        TrayManager::setup_tray(config);
+    }
+}

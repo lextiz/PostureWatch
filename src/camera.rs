@@ -224,6 +224,12 @@ mod tests {
     }
 
     #[test]
+    fn shutdown_without_camera_is_safe() {
+        let mut state = CameraState::new();
+        state.shutdown();
+    }
+
+    #[test]
     fn yuv420_to_rgb_converts_minimal_frame() {
         let state = CameraState::new();
         let y_plane = [100_u8, 100_u8, 100_u8, 100_u8];
