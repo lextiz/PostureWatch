@@ -20,6 +20,7 @@ It periodically checks your posture using your webcam and an LLM endpoint, falli
 - Code and prompts review
 - Break reminder with repeating alert reminder
 - Legal note, friendly installer and MVP publish
+- Screen frame warning
 - Prompts customization
 - OS portability
 - Local model campagin
