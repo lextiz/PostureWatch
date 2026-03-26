@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::log_error;
 use anyhow::Result;
 use base64::Engine;
 use reqwest::Client;
@@ -24,6 +25,7 @@ impl PostureAnalyzer {
 
     pub async fn analyze(&self, image_data: &[u8]) -> Result<PostureStatus> {
         if self.config.api_key.is_empty() {
+            log_error!("API key not configured");
             anyhow::bail!("API key not configured");
         }
 
@@ -35,6 +37,8 @@ impl PostureAnalyzer {
             If no person is visible, reply 'N'. \
             Reply with ONLY a single number (1-10) or 'N'.";
 
+        // Use max_completion_tokens for newer models (gpt-4o, gpt-5.x)
+        // Fall back to max_tokens for older models
         let body = json!({
             "model": self.config.model,
             "messages": [{
@@ -44,7 +48,7 @@ impl PostureAnalyzer {
                     { "type": "image_url", "image_url": { "url": format!("data:image/jpeg;base64,{}", base64_image) } }
                 ]
             }],
-            "max_tokens": 5,
+            "max_completion_tokens": 10,
             "temperature": 0
         });
 
@@ -59,6 +63,7 @@ impl PostureAnalyzer {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp.text().await.unwrap_or_default();
+            log_error!("API error {}: {}", status, text);
             anyhow::bail!("API error {}: {}", status, text);
         }
 
@@ -74,9 +79,11 @@ impl PostureAnalyzer {
                     return Ok(PostureStatus::Score(score));
                 }
             }
+            log_error!("Unexpected LLM response: {}", content);
             anyhow::bail!("Unexpected response: {}", content);
         }
 
+        log_error!("Could not parse API response: {:?}", json);
         anyhow::bail!("Could not parse API response");
     }
 }

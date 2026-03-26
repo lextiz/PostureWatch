@@ -3,6 +3,7 @@
 mod alert;
 mod camera;
 mod config;
+mod logging;
 mod posture;
 mod posture_monitor;
 mod tray;
@@ -20,6 +21,9 @@ use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() {
+    logging::init();
+    log_info!("PostureWatch starting");
+
     let config = Config::load();
 
     let camera_state = TokioMutex::new(camera::CameraState::new());
@@ -52,18 +56,27 @@ async fn main() {
         let mut camera_guard = camera_state.lock().await;
         if let Ok(frame) = camera_guard.capture_frame() {
             drop(camera_guard);
-            if let Ok(status) = analyzer.analyze(&frame).await {
-                let mut monitor_guard = monitor.lock().await;
-                if let AlertEvent::NotifyBadPosture = monitor_guard.process_status(status) {
-                    alert::notify_bad_posture();
+            match analyzer.analyze(&frame).await {
+                Ok(status) => {
+                    let mut monitor_guard = monitor.lock().await;
+                    if let AlertEvent::NotifyBadPosture = monitor_guard.process_status(status) {
+                        alert::notify_bad_posture();
+                    }
+                    monitor_guard.set_thresholds(
+                        current_config.posture_threshold,
+                        current_config.alert_threshold,
+                    );
                 }
-                monitor_guard.set_thresholds(
-                    current_config.posture_threshold,
-                    current_config.alert_threshold,
-                );
+                Err(e) => {
+                    log_error!("Analysis failed: {}", e);
+                }
             }
+        } else {
+            log_error!("Failed to capture frame");
         }
 
         sleep(Duration::from_secs(current_config.cycle_time_secs)).await;
     }
+
+    log_info!("PostureWatch exiting");
 }
