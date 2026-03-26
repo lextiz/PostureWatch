@@ -18,8 +18,8 @@ This project is open source because better desk habits should be easier to build
 
 ## Getting started
 
-1. Download the latest installer from the [Releases](https://github.com/lextiz/PostureWatch/releases) page.
-2. Start PostureWatch. It will appear in your system tray.
+1. Download the latest `PostureWatch.exe` from the [Releases](https://github.com/lextiz/PostureWatch/releases) page.
+2. Start `PostureWatch.exe`. It will appear in your system tray.
 3. Open **Configure...** from the tray menu.
 4. Add an API key for a supported AI provider.
 5. Let it run quietly in the background while you work.

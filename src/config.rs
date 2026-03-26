@@ -32,25 +32,22 @@ impl Default for Config {
 
 impl Config {
     pub fn load() -> Self {
-        if let Some(path) = Self::config_path() {
-            // Check if config file exists
-            if path.exists() {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(config) = toml::from_str::<Config>(&content) {
-                        return config;
-                    }
-                }
+        let Some(path) = Self::config_path() else {
+            return Config::default();
+        };
+
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Ok(config) = toml::from_str::<Config>(&content) {
+                return config;
             }
-            // Create config directory if needed
-            if let Some(dir) = path.parent() {
-                let _ = fs::create_dir_all(dir);
-            }
-            // Write default config
-            let default = Config::default();
-            let _ = fs::write(path, toml::to_string(&default).unwrap_or_default());
-            return default;
         }
-        Config::default()
+
+        let default = Config::default();
+        if let Some(dir) = path.parent() {
+            let _ = fs::create_dir_all(dir);
+        }
+        let _ = fs::write(path, toml::to_string(&default).unwrap_or_default());
+        default
     }
 
     pub fn config_path() -> Option<PathBuf> {

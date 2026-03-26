@@ -74,7 +74,7 @@ jobs:
       - name: Install release tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y mingw-w64 zip
+          sudo apt-get install -y mingw-w64
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -84,15 +84,9 @@ jobs:
       - name: Build release (exe)
         run: cargo build --release --target x86_64-pc-windows-gnu
 
-      - name: Package for Windows
+      - name: Prepare release artifact
         run: |
-          mkdir -p release
-          cp target/x86_64-pc-windows-gnu/release/posturewatch.exe release/ 2>/dev/null || cp target/x86_64-pc-windows-gnu/release/PostureWatch.exe release/
-          echo '@echo off' > release/install.bat
-          echo 'echo PostureWatch Installer' >> release/install.bat
-          echo 'echo Please run posturewatch.exe to start' >> release/install.bat
-          echo 'pause' >> release/install.bat
-          zip -r PostureWatch-Windows.zip release/
+          cp target/x86_64-pc-windows-gnu/release/posturewatch.exe PostureWatch.exe 2>/dev/null || cp target/x86_64-pc-windows-gnu/release/PostureWatch.exe PostureWatch.exe
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -100,4 +94,4 @@ jobs:
           tag_name: main-${{ github.run_number }}
           name: Main build #${{ github.run_number }}
           generate_release_notes: true
-          files: PostureWatch-Windows.zip
+          files: PostureWatch.exe
