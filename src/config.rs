@@ -36,7 +36,7 @@ impl Config {
             // Check if config file exists
             if path.exists() {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(mut config) = toml::from_str::<Config>(&content) {
+                    if let Ok(config) = toml::from_str::<Config>(&content) {
                         return config;
                     }
                 }
@@ -79,6 +79,7 @@ impl Config {
         standard
     }
 
+    #[cfg(windows)]
     pub fn save(&self) -> anyhow::Result<()> {
         if let Some(path) = Self::config_path() {
             if let Some(dir) = path.parent() {
