@@ -49,5 +49,5 @@ If you like it, a GitHub star is appreciated.
 - Icon should reflect monitoring status, tooltip: time at PC (today, current session), current posture score
 - Screen frame warning
 - Prompts customization
-- OS portability
+- OS portability: MacOS, Linux
 - Local model
