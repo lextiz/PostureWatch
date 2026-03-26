@@ -121,161 +121,61 @@ impl TrayManager {
     fn show_configure_dialog(_config: &Arc<TokioMutex<Config>>) {
         use native_dialog::{DialogBuilder, MessageLevel};
 
-        // Load current config synchronously (we reload to get latest values)
-        let current_config = Config::load();
-
-        // API Key dialog
-        let api_key = Self::show_input_dialog(
-            "OpenAI API Key",
-            "Enter your OpenAI API key:",
-            &current_config.api_key,
-        );
-        if api_key.is_none() {
-            return; // User cancelled
-        }
-
-        // Strictness dialog
-        let strictness_options = ["Low", "Medium", "High"];
-        let current_strictness_idx = match current_config.strictness.as_str() {
-            "Low" => 0,
-            "Medium" => 1,
-            "High" => 2,
-            _ => 1,
-        };
-        let strictness = Self::show_choice_dialog(
-            "Strictness Level",
-            "Select posture monitoring strictness:",
-            &strictness_options,
-            current_strictness_idx,
-        );
-        if strictness.is_none() {
-            return;
-        }
-
-        // Monitoring interval dialog
-        let interval = Self::show_input_dialog(
-            "Monitoring Interval",
-            "Enter monitoring interval in seconds (5-300):",
-            &current_config.cycle_time_secs.to_string(),
-        );
-        if interval.is_none() {
-            return;
-        }
-
-        // Validate and save
-        let api_key = api_key.unwrap();
-        let strictness = strictness.unwrap();
-        let interval_str = interval.unwrap();
-
-        let interval_secs: u64 = match interval_str.parse() {
-            Ok(v) if (5..=300).contains(&v) => v,
-            _ => {
+        // Get the config file path
+        let config_path = match Config::config_path() {
+            Some(p) => p,
+            None => {
                 let _ = DialogBuilder::message()
                     .set_level(MessageLevel::Error)
-                    .set_title("Invalid Input")
-                    .set_text("Interval must be a number between 5 and 300 seconds.")
+                    .set_title("Configuration Error")
+                    .set_text("Could not determine config file location.")
                     .alert()
                     .show();
                 return;
             }
         };
 
-        // Save configuration
-        let mut new_config = current_config;
-        new_config.api_key = api_key;
-        new_config.strictness = strictness;
-        new_config.cycle_time_secs = interval_secs;
-
-        if let Err(e) = new_config.save() {
+        // Create config file if it doesn't exist
+        let current_config = Config::load();
+        if let Err(e) = current_config.save() {
             let _ = DialogBuilder::message()
                 .set_level(MessageLevel::Error)
-                .set_title("Save Error")
-                .set_text(&format!("Failed to save configuration: {}", e))
+                .set_title("Configuration Error")
+                .set_text(&format!("Failed to create config file: {}", e))
                 .alert()
                 .show();
-        } else {
-            let _ = DialogBuilder::message()
-                .set_level(MessageLevel::Info)
-                .set_title("Configuration Saved")
-                .set_text("Settings have been saved successfully.")
-                .alert()
-                .show();
+            return;
         }
-    }
 
-    #[cfg(windows)]
-    fn show_input_dialog(title: &str, message: &str, default: &str) -> Option<String> {
-        use std::process::{Command, Stdio};
-
-        // Use PowerShell to show an input dialog
-        let script = format!(
-            r#"
-Add-Type -AssemblyName Microsoft.VisualBasic
-$result = [Microsoft.VisualBasic.Interaction]::InputBox('{}', '{}', '{}')
-Write-Output $result
-"#,
-            message.replace("'", "''"),
-            title.replace("'", "''"),
-            default.replace("'", "''")
-        );
-
-        let output = Command::new("powershell")
-            .args(["-NoProfile", "-Command", &script])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .output()
-            .ok()?;
-
-        let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if result.is_empty() {
-            None
-        } else {
-            Some(result)
-        }
-    }
-
-    #[cfg(windows)]
-    fn show_choice_dialog(
-        title: &str,
-        message: &str,
-        options: &[&str],
-        default_idx: usize,
-    ) -> Option<String> {
-        use native_dialog::{DialogBuilder, MessageLevel};
-
-        // Build options string
-        let options_text = options
-            .iter()
-            .enumerate()
-            .map(|(i, opt)| format!("{}. {}", i + 1, opt))
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        let prompt = format!(
-            "{}\n\n{}\n\nEnter number (1-{}):",
-            message,
-            options_text,
-            options.len()
-        );
-
-        let default_val = (default_idx + 1).to_string();
-        let input = Self::show_input_dialog(title, &prompt, &default_val)?;
-
-        let idx: usize = input.trim().parse().ok()?;
-        if idx >= 1 && idx <= options.len() {
-            Some(options[idx - 1].to_string())
-        } else {
+        // Open the config file in the default text editor
+        if let Err(e) = std::process::Command::new("notepad.exe")
+            .arg(&config_path)
+            .spawn()
+        {
             let _ = DialogBuilder::message()
                 .set_level(MessageLevel::Error)
-                .set_title("Invalid Selection")
-                .set_text(&format!(
-                    "Please enter a number between 1 and {}",
-                    options.len()
-                ))
+                .set_title("Configuration Error")
+                .set_text(&format!("Failed to open config editor: {}", e))
                 .alert()
                 .show();
-            None
+            return;
         }
+
+        let _ = DialogBuilder::message()
+            .set_level(MessageLevel::Info)
+            .set_title("Configuration")
+            .set_text(&format!(
+                "Config file opened in Notepad.\n\n\
+                Edit the following settings:\n\
+                - api_key: Your OpenAI API key\n\
+                - strictness: Low, Medium, or High\n\
+                - cycle_time_secs: Check interval (5-300)\n\n\
+                Save the file and restart the app to apply changes.\n\n\
+                Config location:\n{}",
+                config_path.display()
+            ))
+            .alert()
+            .show();
     }
 
     #[cfg(windows)]
