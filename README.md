@@ -18,11 +18,11 @@ It periodically checks your posture using your webcam and an LLM endpoint, falli
 - Remove "privacy mode" and "local fallback" 
 - Simplify code and architecture
 - Code and prompts review
+- Break reminder with repeating alert reminder
+- Legal note, friendly installer and MVP publish
 - Prompts customization
-- Repeating alert reminder
-- Desk raise reminder
-- Break reminder
 - OS portability
+- Local model campagin
 
 ## Architecture
 
