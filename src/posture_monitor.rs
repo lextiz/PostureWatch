@@ -29,6 +29,7 @@ impl MonitorLogic {
                 if score < self.posture_threshold {
                     self.consecutive_bad += 1;
                     if self.consecutive_bad >= self.alert_threshold {
+                        self.consecutive_bad = 0; // Reset after alerting
                         AlertEvent::NotifyBadPosture
                     } else {
                         AlertEvent::None

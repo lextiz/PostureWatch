@@ -116,6 +116,15 @@ impl TrayManager {
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
 
+        // Each label needs its own variable to persist
+        let mut lbl1 = nwg::Label::default();
+        let mut lbl2 = nwg::Label::default();
+        let mut lbl3 = nwg::Label::default();
+        let mut lbl4 = nwg::Label::default();
+        let mut lbl5 = nwg::Label::default();
+        let mut lbl6 = nwg::Label::default();
+        let mut lbl7 = nwg::Label::default();
+
         nwg::Window::builder()
             .size((420, 230))
             .position((300, 200))
@@ -124,15 +133,13 @@ impl TrayManager {
             .build(&mut window)
             .ok();
 
-        let mut label = nwg::Label::default();
-
         // API Key
         nwg::Label::builder()
             .text("API Key:")
             .position((20, 20))
             .size((120, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl1)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.api_key)
@@ -148,7 +155,7 @@ impl TrayManager {
             .position((20, 55))
             .size((120, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl2)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.posture_threshold.to_string())
@@ -162,7 +169,7 @@ impl TrayManager {
             .position((205, 55))
             .size((45, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl3)
             .ok();
 
         nwg::Label::builder()
@@ -170,7 +177,7 @@ impl TrayManager {
             .position((260, 55))
             .size((80, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl4)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.alert_threshold.to_string())
@@ -186,7 +193,7 @@ impl TrayManager {
             .position((20, 90))
             .size((120, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl5)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.cycle_time_secs.to_string())
@@ -200,7 +207,7 @@ impl TrayManager {
             .position((220, 90))
             .size((170, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl6)
             .ok();
 
         // Stand reminder
@@ -228,7 +235,7 @@ impl TrayManager {
             .position((220, 127))
             .size((170, 22))
             .parent(&window)
-            .build(&mut label)
+            .build(&mut lbl7)
             .ok();
 
         // Buttons
