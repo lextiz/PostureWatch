@@ -55,6 +55,7 @@ async fn main() {
         if let Ok(frame) = camera_state.capture_frame() {
             match analyzer.analyze(&frame, &current_config).await {
                 Ok(status) => {
+                    tray::set_current_posture_status(&status);
                     if let AlertEvent::NotifyBadPosture = monitor.process_status(status) {
                         alert::notify_bad_posture();
                     }
