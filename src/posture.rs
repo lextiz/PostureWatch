@@ -5,6 +5,7 @@ use base64::Engine;
 use reqwest::Client;
 use serde_json::json;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum PostureStatus {
     Score(u32),
     NoPerson,
@@ -73,23 +74,87 @@ If valid, score only posture alignment: \
             anyhow::bail!("API error {}: {}", status, text);
         }
 
-        let json: serde_json::Value = resp.json().await?;
+        let response_json: serde_json::Value = resp.json().await?;
+        parse_api_response(&response_json)
+    }
+}
 
-        if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
-            let text = content.trim();
-            if text.eq_ignore_ascii_case("n") {
-                return Ok(PostureStatus::NoPerson);
-            }
-            if let Ok(score) = text.parse::<u32>() {
-                if (1..=10).contains(&score) {
-                    return Ok(PostureStatus::Score(score));
-                }
-            }
-            log_error!("Unexpected LLM response: {}", content);
-            anyhow::bail!("Unexpected response: {}", content);
+fn parse_api_response(response_json: &serde_json::Value) -> Result<PostureStatus> {
+    if let Some(content) = response_json["choices"][0]["message"]["content"].as_str() {
+        return parse_posture_status(content);
+    }
+
+    log_error!("Could not parse API response: {:?}", response_json);
+    anyhow::bail!("Could not parse API response");
+}
+
+fn parse_posture_status(content: &str) -> Result<PostureStatus> {
+    let text = content.trim();
+
+    if text.eq_ignore_ascii_case("n") {
+        return Ok(PostureStatus::NoPerson);
+    }
+
+    if let Ok(score) = text.parse::<u32>() {
+        if (1..=10).contains(&score) {
+            return Ok(PostureStatus::Score(score));
         }
+    }
 
-        log_error!("Could not parse API response: {:?}", json);
-        anyhow::bail!("Could not parse API response");
+    log_error!("Unexpected LLM response: {}", content);
+    anyhow::bail!("Unexpected response: {}", content);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_status_accepts_valid_score() {
+        assert_eq!(parse_posture_status("7").unwrap(), PostureStatus::Score(7));
+    }
+
+    #[test]
+    fn parse_status_trims_whitespace() {
+        assert_eq!(
+            parse_posture_status(" 10 \n").unwrap(),
+            PostureStatus::Score(10)
+        );
+    }
+
+    #[test]
+    fn parse_status_supports_no_person_marker() {
+        assert_eq!(parse_posture_status("N").unwrap(), PostureStatus::NoPerson);
+        assert_eq!(parse_posture_status("n").unwrap(), PostureStatus::NoPerson);
+    }
+
+    #[test]
+    fn parse_status_rejects_invalid_values() {
+        assert!(parse_posture_status("0").is_err());
+        assert!(parse_posture_status("11").is_err());
+        assert!(parse_posture_status("bad posture").is_err());
+    }
+
+    #[test]
+    fn parse_api_response_extracts_nested_content() {
+        let response_json = json!({
+            "choices": [{
+                "message": {
+                    "content": "8"
+                }
+            }]
+        });
+
+        assert_eq!(
+            parse_api_response(&response_json).unwrap(),
+            PostureStatus::Score(8)
+        );
+    }
+
+    #[test]
+    fn parse_api_response_errors_when_content_missing() {
+        let response_json = json!({"choices": []});
+        assert!(parse_api_response(&response_json).is_err());
     }
 }

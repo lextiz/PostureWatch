@@ -119,4 +119,47 @@ mod tests {
             AlertEvent::None
         ));
     }
+
+    #[test]
+    fn test_thresholds_are_clamped() {
+        let mut logic = MonitorLogic::new(0, 0);
+
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(1)),
+            AlertEvent::None
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(0)),
+            AlertEvent::NotifyBadPosture
+        ));
+
+        logic.set_thresholds(42, 0);
+
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(9)),
+            AlertEvent::NotifyBadPosture
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(10)),
+            AlertEvent::None
+        ));
+    }
+
+    #[test]
+    fn test_counter_resets_after_alert() {
+        let mut logic = MonitorLogic::new(5, 2);
+
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(4)),
+            AlertEvent::None
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(4)),
+            AlertEvent::NotifyBadPosture
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(4)),
+            AlertEvent::None
+        ));
+    }
 }

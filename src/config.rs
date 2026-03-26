@@ -90,3 +90,37 @@ impl Config {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Config;
+
+    #[test]
+    fn default_thresholds_are_valid() {
+        let config = Config::default();
+
+        assert_eq!(config.posture_threshold, 5);
+        assert_eq!(config.alert_threshold, 2);
+        assert!(config.desk_raise_enabled);
+    }
+
+    #[test]
+    fn default_config_round_trips_through_toml() {
+        let default_config = Config::default();
+
+        let toml_text = toml::to_string(&default_config).expect("serialize default config");
+        let parsed: Config = toml::from_str(&toml_text).expect("parse serialized config");
+
+        assert_eq!(parsed.provider_endpoint, default_config.provider_endpoint);
+        assert_eq!(parsed.model, default_config.model);
+        assert_eq!(parsed.api_key, default_config.api_key);
+        assert_eq!(parsed.cycle_time_secs, default_config.cycle_time_secs);
+        assert_eq!(parsed.posture_threshold, default_config.posture_threshold);
+        assert_eq!(parsed.alert_threshold, default_config.alert_threshold);
+        assert_eq!(parsed.desk_raise_enabled, default_config.desk_raise_enabled);
+        assert_eq!(
+            parsed.desk_raise_interval_mins,
+            default_config.desk_raise_interval_mins
+        );
+    }
+}

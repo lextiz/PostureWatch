@@ -1,5 +1,8 @@
 # PostureWatch
 
+[![CI & Release](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml/badge.svg)](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml)
+[![codecov](https://codecov.io/gh/lextiz/PostureWatch/graph/badge.svg)](https://codecov.io/gh/lextiz/PostureWatch)
+
 PostureWatch is a small desktop app that helps you notice bad posture and remember to take breaks while you work at PC.
 
 It uses your webcam together with a vision model to check posture from time to time, then nudges you when it looks like it’s time to sit better, stand up, or step away from the desk.
