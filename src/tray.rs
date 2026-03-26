@@ -26,6 +26,9 @@ impl TrayManager {
     fn run_tray_loop(config: Arc<TokioMutex<Config>>) -> Result<(), Box<dyn std::error::Error>> {
         use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
         use tray_icon::TrayIconBuilder;
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
+        };
 
         let icon = Self::create_icon()?;
 
@@ -52,37 +55,50 @@ impl TrayManager {
 
         let menu_channel = MenuEvent::receiver();
 
-        loop {
-            if !APP_RUNNING.load(Ordering::SeqCst) {
-                break;
-            }
+        // Run Windows message loop
+        unsafe {
+            let mut msg: MSG = std::mem::zeroed();
 
-            if let Ok(event) = menu_channel.try_recv() {
-                match event.id.0.as_str() {
-                    "configure" => {
-                        Self::show_configure_dialog(&config);
-                    }
-                    "pause" => {
-                        let currently_enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
-                        MONITORING_ENABLED.store(!currently_enabled, Ordering::SeqCst);
-                        if currently_enabled {
-                            pause_item.set_text("Resume");
-                        } else {
-                            pause_item.set_text("Pause");
+            loop {
+                // Check for menu events first
+                if let Ok(event) = menu_channel.try_recv() {
+                    match event.id.0.as_str() {
+                        "configure" => {
+                            Self::show_configure_dialog(&config);
                         }
+                        "pause" => {
+                            let currently_enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
+                            MONITORING_ENABLED.store(!currently_enabled, Ordering::SeqCst);
+                            if currently_enabled {
+                                pause_item.set_text("Resume");
+                            } else {
+                                pause_item.set_text("Pause");
+                            }
+                        }
+                        "about" => {
+                            Self::show_about_dialog();
+                        }
+                        "exit" => {
+                            APP_RUNNING.store(false, Ordering::SeqCst);
+                            break;
+                        }
+                        _ => {}
                     }
-                    "about" => {
-                        Self::show_about_dialog();
-                    }
-                    "exit" => {
-                        APP_RUNNING.store(false, Ordering::SeqCst);
-                        break;
-                    }
-                    _ => {}
                 }
-            }
 
-            std::thread::sleep(std::time::Duration::from_millis(50));
+                // Check app running status
+                if !APP_RUNNING.load(Ordering::SeqCst) {
+                    break;
+                }
+
+                // Process Windows messages (non-blocking with timeout)
+                while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
+                }
+
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
         }
 
         Ok(())

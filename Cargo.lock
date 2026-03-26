@@ -3105,6 +3105,7 @@ dependencies = [
  "tokio",
  "toml",
  "tray-icon",
+ "windows-sys 0.59.0",
  "winrt-notification",
 ]
 
