@@ -126,6 +126,10 @@ mod tests {
 
         assert!(matches!(
             logic.process_status(PostureStatus::Score(1)),
+            AlertEvent::None
+        ));
+        assert!(matches!(
+            logic.process_status(PostureStatus::Score(0)),
             AlertEvent::NotifyBadPosture
         ));
 
