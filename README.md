@@ -32,6 +32,8 @@ PostureWatch uses your webcam and sends posture checks to the vision endpoint yo
 
 PostureWatch is here to help with posture and breaks, not surveillance or invasive use. Please use it lawfully, with appropriate consent where needed.
 
+Be mindful of your LLM tokens too frequent monitoring and choosing an expensive model (which is not necessary) will cost you.
+
 ## Contributing
 
 If you’d like to help, please see [contribute.md](./contribute.md).
