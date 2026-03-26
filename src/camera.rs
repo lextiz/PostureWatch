@@ -41,6 +41,12 @@ impl CameraState {
         self.convert_to_jpeg(buffer, w, h)
     }
 
+    pub fn shutdown(&mut self) {
+        if let Some(mut cam) = self.camera.take() {
+            let _ = cam.stop_stream();
+        }
+    }
+
     fn convert_to_jpeg(&self, buffer: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
         let pixels = (w as usize) * (h as usize);
 

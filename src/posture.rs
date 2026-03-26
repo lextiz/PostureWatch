@@ -12,19 +12,17 @@ pub enum PostureStatus {
 
 pub struct PostureAnalyzer {
     client: Client,
-    config: Config,
 }
 
 impl PostureAnalyzer {
-    pub fn new(config: Config) -> Self {
+    pub fn new() -> Self {
         Self {
             client: Client::new(),
-            config,
         }
     }
 
-    pub async fn analyze(&self, image_data: &[u8]) -> Result<PostureStatus> {
-        if self.config.api_key.is_empty() {
+    pub async fn analyze(&self, image_data: &[u8], config: &Config) -> Result<PostureStatus> {
+        if config.api_key.is_empty() {
             log_error!("API key not configured");
             anyhow::bail!("API key not configured");
         }
@@ -40,7 +38,7 @@ impl PostureAnalyzer {
         // Use max_completion_tokens for newer models (gpt-4o, gpt-5.x)
         // Fall back to max_tokens for older models
         let body = json!({
-            "model": self.config.model,
+            "model": config.model,
             "messages": [{
                 "role": "user",
                 "content": [
@@ -54,8 +52,8 @@ impl PostureAnalyzer {
 
         let resp = self
             .client
-            .post(&self.config.provider_endpoint)
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .post(&config.provider_endpoint)
+            .header("Authorization", format!("Bearer {}", config.api_key))
             .json(&body)
             .send()
             .await?;

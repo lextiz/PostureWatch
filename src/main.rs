@@ -28,20 +28,27 @@ async fn main() {
 
     let camera_state = TokioMutex::new(camera::CameraState::new());
     let config_arc = Arc::new(TokioMutex::new(config.clone()));
-    let analyzer = PostureAnalyzer::new(config.clone());
+    let analyzer = PostureAnalyzer::new();
     let monitor = TokioMutex::new(MonitorLogic::new(
         config.posture_threshold,
         config.alert_threshold,
     ));
     let mut last_desk_raise = Instant::now();
+    let mut was_monitoring_enabled = true;
 
     tray::TrayManager::setup_tray(config_arc);
 
     while APP_RUNNING.load(Ordering::SeqCst) {
         if !MONITORING_ENABLED.load(Ordering::SeqCst) {
+            if was_monitoring_enabled {
+                let mut camera_guard = camera_state.lock().await;
+                camera_guard.shutdown();
+            }
+            was_monitoring_enabled = false;
             sleep(Duration::from_secs(1)).await;
             continue;
         }
+        was_monitoring_enabled = true;
 
         let current_config = Config::load();
 
@@ -56,7 +63,7 @@ async fn main() {
         let mut camera_guard = camera_state.lock().await;
         if let Ok(frame) = camera_guard.capture_frame() {
             drop(camera_guard);
-            match analyzer.analyze(&frame).await {
+            match analyzer.analyze(&frame, &current_config).await {
                 Ok(status) => {
                     let mut monitor_guard = monitor.lock().await;
                     if let AlertEvent::NotifyBadPosture = monitor_guard.process_status(status) {
@@ -77,6 +84,9 @@ async fn main() {
 
         sleep(Duration::from_secs(current_config.cycle_time_secs)).await;
     }
+
+    let mut camera_guard = camera_state.lock().await;
+    camera_guard.shutdown();
 
     log_info!("PostureWatch exiting");
 }
