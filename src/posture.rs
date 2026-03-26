@@ -29,11 +29,19 @@ impl PostureAnalyzer {
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
 
-        let prompt = "Rate the person's sitting posture from 1 to 10. \
-            1 = terrible posture (severe slouching, head far forward). \
-            10 = perfect posture (straight back, shoulders aligned). \
-            If no person is visible, reply 'N'. \
-            Reply with ONLY a single number (1-10) or 'N'.";
+        let prompt = "Rate the person’s working posture from the image. \
+Reply with ONLY: \
+- a single number 1-10, or \
+- 'N' if posture cannot be judged reliably. \
+Return 'N' unless ALL are true: \
+- exactly one person is clearly visible \
+- the person is at a desk/workstation, either seated or standing \
+- the upper body is visible enough to judge posture: head, neck, shoulders, and torso \
+- the pose is neutral and representative of normal working posture \
+Return 'N' for any ambiguity, including: partial upper body, occlusion, blur, multiple people, walking, stretching, leaning far away from the desk, talking on the phone, turning strongly sideways, looking far aside, or any temporary/non-working pose. \
+If valid, score only posture alignment: \
+1 = severe slouch / head far forward / poor upper-body alignment \
+10 = upright neutral posture / shoulders aligned / head balanced";
 
         // Use max_completion_tokens for newer models (gpt-4o, gpt-5.x)
         // Fall back to max_tokens for older models
