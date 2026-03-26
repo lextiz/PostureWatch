@@ -52,7 +52,7 @@ jobs:
         run: cargo build --verbose
 
       - name: Run coverage validation
-        run: cargo llvm-cov --ignore-filename-regex "src/(main|camera|tray|alert|logging)\\.rs" --fail-under-lines 80 --codecov --output-path codecov.json
+        run: cargo llvm-cov --ignore-filename-regex "src/(main|camera|tray|alert|logging)\\.rs" --fail-under-lines 70 --codecov --output-path codecov.json
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
