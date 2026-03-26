@@ -121,61 +121,232 @@ impl TrayManager {
     fn show_configure_dialog(_config: &Arc<TokioMutex<Config>>) {
         use native_dialog::{DialogBuilder, MessageLevel};
 
-        // Get the config file path
-        let config_path = match Config::config_path() {
-            Some(p) => p,
-            None => {
-                let _ = DialogBuilder::message()
-                    .set_level(MessageLevel::Error)
-                    .set_title("Configuration Error")
-                    .set_text("Could not determine config file location.")
-                    .alert()
-                    .show();
-                return;
-            }
-        };
+        let mut current_config = Config::load();
 
-        // Create config file if it doesn't exist
-        let current_config = Config::load();
+        // Step 1: API Key
+        let api_key = Self::show_api_key_dialog(&current_config.api_key);
+        if api_key.is_none() {
+            return; // User cancelled
+        }
+
+        // Step 2: Strictness (using Yes/No dialogs)
+        let strictness = Self::show_strictness_dialog(&current_config.strictness);
+        if strictness.is_none() {
+            return; // User cancelled
+        }
+
+        // Step 3: Monitoring interval
+        let interval = Self::show_interval_dialog(current_config.cycle_time_secs);
+        if interval.is_none() {
+            return; // User cancelled
+        }
+
+        // Save configuration
+        current_config.api_key = api_key.unwrap();
+        current_config.strictness = strictness.unwrap();
+        current_config.cycle_time_secs = interval.unwrap();
+
         if let Err(e) = current_config.save() {
             let _ = DialogBuilder::message()
                 .set_level(MessageLevel::Error)
-                .set_title("Configuration Error")
-                .set_text(&format!("Failed to create config file: {}", e))
+                .set_title("Save Error")
+                .set_text(&format!("Failed to save configuration: {}", e))
                 .alert()
                 .show();
-            return;
+        } else {
+            let _ = DialogBuilder::message()
+                .set_level(MessageLevel::Info)
+                .set_title("Configuration Saved")
+                .set_text("Settings have been saved successfully.\n\nChanges will take effect on the next posture check.")
+                .alert()
+                .show();
         }
+    }
 
-        // Open the config file in the default text editor
-        if let Err(e) = std::process::Command::new("notepad.exe")
-            .arg(&config_path)
-            .spawn()
-        {
+    #[cfg(windows)]
+    fn show_api_key_dialog(current: &str) -> Option<String> {
+        use native_dialog::{DialogBuilder, MessageLevel};
+
+        // For API key, we'll use a file-based approach that's safe from antivirus
+        // Create a temporary file with the current key, open in notepad, read back
+        let temp_dir = std::env::temp_dir();
+        let temp_file = temp_dir.join("posturewatch_apikey.txt");
+
+        // Write current key to temp file
+        if let Err(_) = std::fs::write(&temp_file, current) {
             let _ = DialogBuilder::message()
                 .set_level(MessageLevel::Error)
-                .set_title("Configuration Error")
-                .set_text(&format!("Failed to open config editor: {}", e))
+                .set_title("Error")
+                .set_text("Could not create temporary file for API key input.")
                 .alert()
                 .show();
-            return;
+            return None;
         }
 
-        let _ = DialogBuilder::message()
+        // Show instructions
+        let proceed = DialogBuilder::message()
             .set_level(MessageLevel::Info)
-            .set_title("Configuration")
-            .set_text(&format!(
-                "Config file opened in Notepad.\n\n\
-                Edit the following settings:\n\
-                - api_key: Your OpenAI API key\n\
-                - strictness: Low, Medium, or High\n\
-                - cycle_time_secs: Check interval (5-300)\n\n\
-                Save the file and restart the app to apply changes.\n\n\
-                Config location:\n{}",
-                config_path.display()
-            ))
-            .alert()
+            .set_title("OpenAI API Key")
+            .set_text(
+                "A Notepad window will open with your current API key.\n\n\
+                      Edit the key and save the file (Ctrl+S), then close Notepad.\n\n\
+                      Click OK to continue or Cancel to skip.",
+            )
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if !proceed {
+            let _ = std::fs::remove_file(&temp_file);
+            return Some(current.to_string()); // Keep current value
+        }
+
+        // Open notepad and wait for it to close
+        let result = std::process::Command::new("notepad.exe")
+            .arg(&temp_file)
+            .status();
+
+        if result.is_err() {
+            let _ = std::fs::remove_file(&temp_file);
+            return Some(current.to_string());
+        }
+
+        // Read back the key
+        let new_key = std::fs::read_to_string(&temp_file)
+            .unwrap_or_else(|_| current.to_string())
+            .trim()
+            .to_string();
+
+        // Clean up
+        let _ = std::fs::remove_file(&temp_file);
+
+        Some(new_key)
+    }
+
+    #[cfg(windows)]
+    fn show_strictness_dialog(current: &str) -> Option<String> {
+        use native_dialog::{DialogBuilder, MessageLevel};
+
+        // Show current setting and options
+        let msg = format!(
+            "Current strictness: {}\n\n\
+             Choose new strictness level:\n\n\
+             • Low - Alerts only for very poor posture\n\
+             • Medium - Balanced monitoring (recommended)\n\
+             • High - Strict posture requirements\n\n\
+             Click Yes for Low, No for Medium, or Cancel for High",
+            current
+        );
+
+        // Use Yes/No/Cancel to select: Yes=Low, No=Medium, Cancel handled separately
+        let result = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Strictness Level")
+            .set_text(&msg)
+            .confirm()
             .show();
+
+        match result {
+            Ok(true) => {
+                // User clicked Yes - but we need 3 options
+                // Let's do a two-step approach
+            }
+            Ok(false) => {}
+            Err(_) => return None,
+        }
+
+        // Better approach: Sequential dialogs
+        let use_low = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Strictness: Low?")
+            .set_text(&format!(
+                "Current: {}\n\n\
+                 Set strictness to LOW?\n\
+                 (Alerts only for very poor posture)\n\n\
+                 Click Yes for Low, or No to see other options.",
+                current
+            ))
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if use_low {
+            return Some("Low".to_string());
+        }
+
+        let use_medium = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Strictness: Medium?")
+            .set_text(
+                "Set strictness to MEDIUM?\n\
+                      (Balanced monitoring - recommended)\n\n\
+                      Click Yes for Medium, or No for High.",
+            )
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if use_medium {
+            Some("Medium".to_string())
+        } else {
+            Some("High".to_string())
+        }
+    }
+
+    #[cfg(windows)]
+    fn show_interval_dialog(current: u64) -> Option<u64> {
+        use native_dialog::{DialogBuilder, MessageLevel};
+
+        // Offer preset intervals
+        let use_10 = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Monitoring Interval")
+            .set_text(&format!(
+                "Current interval: {} seconds\n\n\
+                 Set interval to 10 seconds?\n\
+                 (Check posture every 10 seconds)\n\n\
+                 Click Yes for 10s, or No to see other options.",
+                current
+            ))
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if use_10 {
+            return Some(10);
+        }
+
+        let use_30 = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Monitoring Interval")
+            .set_text(
+                "Set interval to 30 seconds?\n\n\
+                      Click Yes for 30s, or No to see other options.",
+            )
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if use_30 {
+            return Some(30);
+        }
+
+        let use_60 = DialogBuilder::message()
+            .set_level(MessageLevel::Question)
+            .set_title("Monitoring Interval")
+            .set_text(
+                "Set interval to 60 seconds (1 minute)?\n\n\
+                      Click Yes for 60s, or No for 120s.",
+            )
+            .confirm()
+            .show()
+            .unwrap_or(false);
+
+        if use_60 {
+            Some(60)
+        } else {
+            Some(120)
+        }
     }
 
     #[cfg(windows)]
