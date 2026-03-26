@@ -54,8 +54,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run tests
-        run: echo "Tests skipped due to camera dependency"
-        # run: cargo test --verbose
+        run: cargo test --verbose
 
   build:
     runs-on: ubuntu-latest

@@ -1,37 +1,35 @@
 pub enum AlertEvent {
     None,
-    FirstWarning,
     NotifyBadPosture,
-    PostureImproved,
 }
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Strictness {
-    Low,    // Require 3 bad before alert
-    Medium, // Require 2 bad before alert
-    High,   // Alert on first bad (1)
+    Low,
+    Medium,
+    High,
 }
 
 impl Strictness {
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
-            "low" => Strictness::Low,
-            "high" => Strictness::High,
-            _ => Strictness::Medium,
+            "low" => Self::Low,
+            "high" => Self::High,
+            _ => Self::Medium,
         }
     }
 
-    pub fn threshold(&self) -> u32 {
+    fn threshold(self) -> u32 {
         match self {
-            Strictness::Low => 3,
-            Strictness::Medium => 2,
-            Strictness::High => 1,
+            Self::Low => 3,
+            Self::Medium => 2,
+            Self::High => 1,
         }
     }
 }
 
 pub struct MonitorLogic {
-    pub consecutive_bad: u32,
+    consecutive_bad: u32,
     strictness: Strictness,
 }
 
@@ -54,21 +52,10 @@ impl MonitorLogic {
                 if self.consecutive_bad >= self.strictness.threshold() {
                     AlertEvent::NotifyBadPosture
                 } else {
-                    AlertEvent::FirstWarning
-                }
-            }
-            super::posture::PostureStatus::Good => {
-                if self.consecutive_bad > 0 {
-                    self.consecutive_bad = 0;
-                    AlertEvent::PostureImproved
-                } else {
-                    self.consecutive_bad = 0;
                     AlertEvent::None
                 }
             }
-            super::posture::PostureStatus::NoPerson => {
-                // No person detected - reset counter, no alerts
-                println!("No person detected in frame.");
+            super::posture::PostureStatus::Good | super::posture::PostureStatus::NoPerson => {
                 self.consecutive_bad = 0;
                 AlertEvent::None
             }
@@ -82,22 +69,17 @@ mod tests {
     use crate::posture::PostureStatus;
 
     #[test]
-    fn test_alert_repeat_behavior_medium() {
+    fn test_medium_strictness_alerts_on_second_bad() {
         let mut logic = MonitorLogic::new(Strictness::Medium);
 
-        // Initial good
         assert!(matches!(
             logic.process_status(PostureStatus::Good),
             AlertEvent::None
         ));
-
-        // First bad - warning only
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
-            AlertEvent::FirstWarning
+            AlertEvent::None
         ));
-
-        // Second bad - notify
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::NotifyBadPosture
@@ -105,10 +87,9 @@ mod tests {
     }
 
     #[test]
-    fn test_alert_repeat_behavior_high() {
+    fn test_high_strictness_alerts_immediately() {
         let mut logic = MonitorLogic::new(Strictness::High);
 
-        // First bad - notify immediately
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::NotifyBadPosture
@@ -116,22 +97,17 @@ mod tests {
     }
 
     #[test]
-    fn test_alert_repeat_behavior_low() {
+    fn test_low_strictness_alerts_on_third_bad() {
         let mut logic = MonitorLogic::new(Strictness::Low);
 
-        // First bad - warning
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
-            AlertEvent::FirstWarning
+            AlertEvent::None
         ));
-
-        // Second bad - warning
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
-            AlertEvent::FirstWarning
+            AlertEvent::None
         ));
-
-        // Third bad - notify
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
             AlertEvent::NotifyBadPosture
@@ -142,22 +118,17 @@ mod tests {
     fn test_no_person_resets_counter() {
         let mut logic = MonitorLogic::new(Strictness::Medium);
 
-        // First bad - warning only
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
-            AlertEvent::FirstWarning
+            AlertEvent::None
         ));
-
-        // NoPerson should reset counter and not trigger alert
         assert!(matches!(
             logic.process_status(PostureStatus::NoPerson),
             AlertEvent::None
         ));
-
-        // After NoPerson, next bad should be a warning again (counter reset)
         assert!(matches!(
             logic.process_status(PostureStatus::Bad),
-            AlertEvent::FirstWarning
+            AlertEvent::None
         ));
     }
 }

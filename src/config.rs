@@ -1,27 +1,7 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{self, Write};
 use std::path::PathBuf;
-
-#[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
-pub enum Strictness {
-    Low,
-    #[default]
-    Medium,
-    High,
-}
-
-impl std::fmt::Display for Strictness {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Strictness::Low => write!(f, "Low"),
-            Strictness::Medium => write!(f, "Medium"),
-            Strictness::High => write!(f, "High"),
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -29,8 +9,6 @@ pub struct Config {
     pub model: String,
     pub api_key: String,
     pub cycle_time_secs: u64,
-    pub alert_color: String,
-    pub alert_duration_secs: u64,
     pub desk_raise_interval_secs: u64,
     pub strictness: String,
 }
@@ -40,11 +18,9 @@ impl Default for Config {
         Self {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-4o-mini".to_string(),
-            api_key: "".to_string(), // No hardcoded secrets!
-            cycle_time_secs: 10,     // 10 seconds
-            alert_color: "red".to_string(),
-            alert_duration_secs: 5,
-            desk_raise_interval_secs: 3600, // 1 hour
+            api_key: String::new(),
+            cycle_time_secs: 10,
+            desk_raise_interval_secs: 3600,
             strictness: "Medium".to_string(),
         }
     }
@@ -112,35 +88,5 @@ impl Config {
             fs::write(path, toml::to_string(self)?)?;
         }
         Ok(())
-    }
-
-    /// Check if API key is set (without prompting)
-    #[allow(dead_code)]
-    pub fn has_api_key(&self) -> bool {
-        !self.api_key.is_empty()
-    }
-
-    #[allow(dead_code)]
-    pub fn prompt_for_api_key(&mut self) {
-        if self.api_key.is_empty() {
-            println!("\n=================================================");
-            println!("  Welcome to PostureWatch!");
-            println!("=================================================");
-            println!("To analyze your posture, PostureWatch needs an API key.");
-            println!("You can get a free API key from OpenAI or other providers.");
-            print!("Please enter your API key: ");
-
-            io::stdout().flush().unwrap();
-            let mut api_key = String::new();
-            if io::stdin().read_line(&mut api_key).is_ok() {
-                self.api_key = api_key.trim().to_string();
-                if !self.api_key.is_empty() {
-                    println!("\nAPI key saved successfully!");
-                    if let Err(e) = self.save() {
-                        eprintln!("Warning: Could not save config: {}", e);
-                    }
-                }
-            }
-        }
     }
 }
