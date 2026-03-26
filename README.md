@@ -44,10 +44,8 @@ If you like it, a GitHub star is appreciated.
 
 ## Roadmap
 
-- Simplify code and architecture
-- Code and prompts review
+- Option to turn the camera on/off only for taking pictures (blinking light trade-off)
 - Break reminder with repeating alert reminder
-- Legal note, friendly installer and MVP publish
 - Icon should reflect monitoring status, tooltip: time at PC (today, current session), current posture score
 - Screen frame warning
 - Prompts customization
