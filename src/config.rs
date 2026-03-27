@@ -18,7 +18,7 @@ pub struct Config {
 }
 
 fn default_llm_prompt() -> String {
-    "Rate the person’s working posture from the image. \nReply with ONLY: \n- a single number 1-10, or \n- 'N' if posture cannot be judged reliably. \nReturn 'N' unless ALL are true: \n- exactly one person is clearly visible \n- the person is at a desk/workstation, either seated or standing \n- the upper body is visible enough to judge posture: head, neck, shoulders, and torso \n- the pose is neutral and representative of normal working posture \nReturn 'N' for any ambiguity, including: partial upper body, occlusion, blur, multiple people, walking, stretching, leaning far away from the desk, talking on the phone, turning strongly sideways, looking far aside, or any temporary/non-working pose. \nIf valid, score only posture alignment: \n1 = severe slouch / head far forward / poor upper-body alignment \n10 = upright neutral posture / shoulders aligned / head balanced".to_string()
+    "Rate the primary person's working posture from 1 to 10.\n\nUse the best possible estimate from visible posture cues, even if the full upper body is not visible.\n\n1 = terrible posture (severe slouching, head far forward)\n10 = excellent posture (upright back, shoulders aligned, head balanced)\n\nReply 'N' only if no person is visible, or posture truly cannot be estimated from the image.\n\nDo not return 'N' just because the person is standing, looking aside, partially visible, or briefly using a phone, unless those make posture impossible to judge.\n\nReply with ONLY a single number (1-10) or 'N'.".to_string()
 }
 
 impl Default for Config {
