@@ -17,6 +17,15 @@ pub fn set_current_posture_status(status: &crate::posture::PostureStatus) {
     LAST_POSTURE_SCORE.store(score, Ordering::SeqCst);
 }
 
+#[cfg(windows)]
+fn current_posture_level_text(score: u32) -> String {
+    if score == 0 {
+        "n/a".to_string()
+    } else {
+        format!("{score}/10")
+    }
+}
+
 pub struct TrayManager;
 
 impl TrayManager {
@@ -52,7 +61,6 @@ impl TrayManager {
             .with_menu(Box::new(menu))
             .with_tooltip("PostureWatch")
             .build()?;
-        let mut last_tooltip_state = (u32::MAX, false);
 
         let menu_channel = MenuEvent::receiver();
 
@@ -78,22 +86,6 @@ impl TrayManager {
 
                 if !APP_RUNNING.load(Ordering::SeqCst) {
                     break;
-                }
-
-                let score = LAST_POSTURE_SCORE.load(Ordering::SeqCst);
-                let monitoring_enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
-                if last_tooltip_state != (score, monitoring_enabled) {
-                    let tooltip = if monitoring_enabled {
-                        if score == 0 {
-                            "PostureWatch | Score: n/a".to_string()
-                        } else {
-                            format!("PostureWatch | Score: {score}/10")
-                        }
-                    } else {
-                        "PostureWatch (Paused)".to_string()
-                    };
-                    let _ = tray.set_tooltip(Some(tooltip));
-                    last_tooltip_state = (score, monitoring_enabled);
                 }
 
                 while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
@@ -142,6 +134,7 @@ impl TrayManager {
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
+        let mut posture_level_label = nwg::Label::default();
 
         // Each label needs its own variable to persist
         let mut lbl1 = nwg::Label::default();
@@ -155,7 +148,7 @@ impl TrayManager {
         let mut lbl9 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 460))
+            .size((420, 490))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -300,17 +293,26 @@ impl TrayManager {
             .build(&mut llm_prompt_input)
             .ok();
 
+        let posture_level = current_posture_level_text(LAST_POSTURE_SCORE.load(Ordering::SeqCst));
+        nwg::Label::builder()
+            .text(&format!("Current posture level: {posture_level}"))
+            .position((20, 410))
+            .size((220, 22))
+            .parent(&window)
+            .build(&mut posture_level_label)
+            .ok();
+
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 410))
+            .position((200, 440))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 410))
+            .position((310, 440))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
