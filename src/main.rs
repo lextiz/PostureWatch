@@ -89,6 +89,7 @@ fn should_notify_desk_raise(config: &Config, last_desk_raise: Instant) -> bool {
 }
 
 #[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::*;
     use std::time::Duration;

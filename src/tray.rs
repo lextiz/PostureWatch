@@ -436,6 +436,7 @@ impl TrayManager {
 }
 
 #[cfg(all(test, not(windows)))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     use super::{set_current_posture_status, TrayManager, LAST_POSTURE_SCORE};
     use crate::config::Config;

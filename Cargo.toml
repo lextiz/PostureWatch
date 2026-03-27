@@ -41,3 +41,6 @@ notify-rust = "4.10"
 strip = false
 lto = "thin"
 codegen-units = 16
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
