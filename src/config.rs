@@ -175,4 +175,47 @@ mod tests {
         let reparsed: Config = toml::from_str(&rewritten).expect("rewritten config should parse");
         assert_eq!(reparsed.model, Config::default().model);
     }
+
+    #[test]
+    fn load_reads_existing_valid_config() {
+        let appdata_root = unique_temp_dir("appdata-valid");
+        let user_config = appdata_root
+            .join("com.posturewatch")
+            .join("PostureWatch")
+            .join("config.toml");
+        fs::create_dir_all(
+            user_config
+                .parent()
+                .expect("user config file should have parent dir"),
+        )
+        .expect("create appdata directory");
+        fs::write(
+            &user_config,
+            r#"
+provider_endpoint = "http://localhost:1234/v1/chat/completions"
+model = "test-model"
+api_key = "abc"
+cycle_time_secs = 22
+posture_threshold = 6
+alert_threshold = 3
+desk_raise_enabled = false
+desk_raise_interval_mins = 90
+"#,
+        )
+        .expect("write valid config");
+
+        std::env::set_var("APPDATA", &appdata_root);
+        let loaded = Config::load();
+        assert_eq!(loaded.model, "test-model");
+        assert_eq!(
+            loaded.provider_endpoint,
+            "http://localhost:1234/v1/chat/completions"
+        );
+        assert_eq!(loaded.api_key, "abc");
+        assert_eq!(loaded.cycle_time_secs, 22);
+        assert_eq!(loaded.posture_threshold, 6);
+        assert_eq!(loaded.alert_threshold, 3);
+        assert!(!loaded.desk_raise_enabled);
+        assert_eq!(loaded.desk_raise_interval_mins, 90);
+    }
 }

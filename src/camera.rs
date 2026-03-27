@@ -270,4 +270,40 @@ mod tests {
             .expect_err("unknown buffer format should fail");
         assert!(err.to_string().contains("Unknown format"));
     }
+
+    #[test]
+    fn convert_to_jpeg_handles_rgba_yuyv_yuv420_and_encoded_input() {
+        let state = CameraState::new();
+
+        let rgba = vec![255_u8, 0_u8, 0_u8, 255_u8, 0_u8, 255_u8, 0_u8, 255_u8];
+        let rgba_jpeg = state
+            .convert_to_jpeg(&rgba, 2, 1)
+            .expect("rgba should convert to jpeg");
+        assert_eq!(&rgba_jpeg[0..2], &[0xFF, 0xD8]);
+
+        let yuyv = vec![100_u8, 128_u8, 150_u8, 128_u8];
+        let yuyv_jpeg = state
+            .convert_to_jpeg(&yuyv, 2, 1)
+            .expect("yuyv should convert to jpeg");
+        assert_eq!(&yuyv_jpeg[0..2], &[0xFF, 0xD8]);
+
+        let mut yuv420 = vec![100_u8, 100_u8, 100_u8, 100_u8];
+        yuv420.extend_from_slice(&[128_u8]);
+        yuv420.extend_from_slice(&[128_u8]);
+        let yuv420_jpeg = state
+            .convert_to_jpeg(&yuv420, 2, 2)
+            .expect("yuv420 should convert to jpeg");
+        assert_eq!(&yuv420_jpeg[0..2], &[0xFF, 0xD8]);
+
+        let png = vec![
+            137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
+            8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207,
+            192, 240, 31, 0, 5, 0, 1, 255, 137, 153, 61, 29, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66,
+            96, 130,
+        ];
+        let encoded_jpeg = state
+            .convert_to_jpeg(&png, 1, 1)
+            .expect("encoded image input should convert to jpeg");
+        assert_eq!(&encoded_jpeg[0..2], &[0xFF, 0xD8]);
+    }
 }
