@@ -27,3 +27,8 @@ fn init_and_log_write_line_to_log_file() {
     let contents = fs::read_to_string(log_path).expect("log file should be readable");
     assert!(contents.contains("INFO: hello test"));
 }
+
+#[test]
+fn log_without_init_is_safe() {
+    log("INFO", "safe without init");
+}

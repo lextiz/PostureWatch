@@ -32,3 +32,14 @@ fn desk_raise_notification_enabled_but_not_due() {
     let last = Instant::now() - Duration::from_secs(30);
     assert!(!should_notify_desk_raise(&config, last));
 }
+
+#[test]
+fn desk_raise_notification_triggers_at_exact_boundary() {
+    let config = Config {
+        desk_raise_enabled: true,
+        desk_raise_interval_mins: 1,
+        ..Config::default()
+    };
+    let last = Instant::now() - Duration::from_secs(60);
+    assert!(should_notify_desk_raise(&config, last));
+}

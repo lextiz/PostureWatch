@@ -30,6 +30,14 @@ fn parse_status_rejects_invalid_values() {
 }
 
 #[test]
+fn parse_status_detects_no_person_in_sentence() {
+    assert_eq!(
+        parse_posture_status("No person in frame: N").unwrap(),
+        PostureStatus::NoPerson
+    );
+}
+
+#[test]
 fn parse_api_response_extracts_nested_content() {
     let response_json = json!({
         "choices": [{
@@ -73,6 +81,38 @@ fn parse_status_accepts_number_with_extra_text() {
 fn parse_api_response_errors_when_content_missing() {
     let response_json = json!({"choices": []});
     assert!(parse_api_response(&response_json).is_err());
+}
+
+#[test]
+fn parse_api_response_errors_when_content_parts_have_no_text() {
+    let response_json = json!({
+        "choices": [{
+            "message": {
+                "content": [{ "type": "image_url", "image_url": { "url": "x" } }]
+            }
+        }]
+    });
+
+    assert!(parse_api_response(&response_json).is_err());
+}
+
+#[test]
+fn parse_api_response_merges_multiple_text_parts() {
+    let response_json = json!({
+        "choices": [{
+            "message": {
+                "content": [
+                    { "type": "text", "text": "score:" },
+                    { "type": "text", "text": "6" }
+                ]
+            }
+        }]
+    });
+
+    assert_eq!(
+        parse_api_response(&response_json).unwrap(),
+        PostureStatus::Score(6)
+    );
 }
 
 #[tokio::test]
