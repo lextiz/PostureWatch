@@ -88,10 +88,16 @@ jobs:
             throw 'Could not find release executable in target/release'
           }
 
+      - name: Package release artifact (zip)
+        shell: pwsh
+        run: Compress-Archive -Path PostureWatch.exe -DestinationPath PostureWatch.zip -Force
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: main-${{ github.run_number }}
           name: Main build #${{ github.run_number }}
           generate_release_notes: true
-          files: PostureWatch.exe
+          files: |
+            PostureWatch.exe
+            PostureWatch.zip
