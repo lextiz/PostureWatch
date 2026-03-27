@@ -30,12 +30,11 @@ impl PostureAnalyzer {
 
         let base64_image = base64::engine::general_purpose::STANDARD.encode(image_data);
 
-        let prompt = "Rate the person's working posture from 1 to 10. \
-1 = severe slouching (head far forward, rounded back). \
-10 = upright neutral posture (head balanced, shoulders aligned). \
-Use the person in the foreground if multiple are visible. \
-If no person is visible or posture truly cannot be judged, reply 'N'. \
-Reply with ONLY a single number (1-10) or 'N'.";
+        let prompt = if config.llm_prompt.trim().is_empty() {
+            Config::default().llm_prompt
+        } else {
+            config.llm_prompt.clone()
+        };
 
         // Use max_completion_tokens for newer models (gpt-4o, gpt-5.x)
         // Fall back to max_tokens for older models

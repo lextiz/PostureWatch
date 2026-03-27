@@ -139,6 +139,7 @@ impl TrayManager {
         let mut interval_input = nwg::TextInput::default();
         let mut desk_raise_check = nwg::CheckBox::default();
         let mut desk_raise_input = nwg::TextInput::default();
+        let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
 
@@ -151,9 +152,10 @@ impl TrayManager {
         let mut lbl6 = nwg::Label::default();
         let mut lbl7 = nwg::Label::default();
         let mut lbl8 = nwg::Label::default();
+        let mut lbl9 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 270))
+            .size((420, 460))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -281,17 +283,34 @@ impl TrayManager {
             .build(&mut lbl7)
             .ok();
 
+        // Advanced prompt
+        nwg::Label::builder()
+            .text("Advanced: LLM prompt")
+            .position((20, 195))
+            .size((380, 22))
+            .parent(&window)
+            .build(&mut lbl9)
+            .ok();
+        nwg::TextBox::builder()
+            .text(&cfg.llm_prompt)
+            .position((20, 220))
+            .size((380, 180))
+            .parent(&window)
+            .focus(true)
+            .build(&mut llm_prompt_input)
+            .ok();
+
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 210))
+            .position((200, 410))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 210))
+            .position((310, 410))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -308,8 +327,9 @@ impl TrayManager {
         let interval_input = Rc::new(RefCell::new(interval_input));
         let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
+        let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, drc, dri) = (
+        let (ak, mi, pt, at, ii, drc, dri, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
@@ -317,6 +337,7 @@ impl TrayManager {
             interval_input.clone(),
             desk_raise_check.clone(),
             desk_raise_input.clone(),
+            llm_prompt_input.clone(),
         );
 
         let handler = nwg::full_bind_event_handler(&window_handle, move |evt, _, handle| {
@@ -367,10 +388,16 @@ impl TrayManager {
                     nwg::modal_info_message(&window_handle, "Error", "Model cannot be empty");
                     return;
                 }
+                let llm_prompt = lpi.borrow().text();
+                if llm_prompt.trim().is_empty() {
+                    nwg::modal_info_message(&window_handle, "Error", "LLM prompt cannot be empty");
+                    return;
+                }
 
                 let mut new_cfg = Config::load();
                 new_cfg.api_key = ak.borrow().text();
                 new_cfg.model = model;
+                new_cfg.llm_prompt = llm_prompt;
                 new_cfg.posture_threshold = posture_th;
                 new_cfg.alert_threshold = alert_th;
                 new_cfg.cycle_time_secs = interval;

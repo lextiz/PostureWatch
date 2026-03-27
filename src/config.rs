@@ -8,11 +8,17 @@ pub struct Config {
     pub provider_endpoint: String,
     pub model: String,
     pub api_key: String,
+    #[serde(default = "default_llm_prompt")]
+    pub llm_prompt: String,
     pub cycle_time_secs: u64,
     pub posture_threshold: u32,
     pub alert_threshold: u32,
     pub desk_raise_enabled: bool,
     pub desk_raise_interval_mins: u64,
+}
+
+fn default_llm_prompt() -> String {
+    "Rate the person’s working posture from the image. \nReply with ONLY: \n- a single number 1-10, or \n- 'N' if posture cannot be judged reliably. \nReturn 'N' unless ALL are true: \n- exactly one person is clearly visible \n- the person is at a desk/workstation, either seated or standing \n- the upper body is visible enough to judge posture: head, neck, shoulders, and torso \n- the pose is neutral and representative of normal working posture \nReturn 'N' for any ambiguity, including: partial upper body, occlusion, blur, multiple people, walking, stretching, leaning far away from the desk, talking on the phone, turning strongly sideways, looking far aside, or any temporary/non-working pose. \nIf valid, score only posture alignment: \n1 = severe slouch / head far forward / poor upper-body alignment \n10 = upright neutral posture / shoulders aligned / head balanced".to_string()
 }
 
 impl Default for Config {
@@ -21,6 +27,7 @@ impl Default for Config {
             provider_endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
             model: "gpt-5.4-mini".to_string(),
             api_key: String::new(),
+            llm_prompt: default_llm_prompt(),
             cycle_time_secs: 10,
             posture_threshold: 5,
             alert_threshold: 2,
@@ -122,6 +129,7 @@ mod tests {
         assert_eq!(parsed.provider_endpoint, default_config.provider_endpoint);
         assert_eq!(parsed.model, default_config.model);
         assert_eq!(parsed.api_key, default_config.api_key);
+        assert_eq!(parsed.llm_prompt, default_config.llm_prompt);
         assert_eq!(parsed.cycle_time_secs, default_config.cycle_time_secs);
         assert_eq!(parsed.posture_threshold, default_config.posture_threshold);
         assert_eq!(parsed.alert_threshold, default_config.alert_threshold);
@@ -195,6 +203,7 @@ mod tests {
 provider_endpoint = "http://localhost:1234/v1/chat/completions"
 model = "test-model"
 api_key = "abc"
+llm_prompt = "custom prompt"
 cycle_time_secs = 22
 posture_threshold = 6
 alert_threshold = 3
@@ -212,10 +221,30 @@ desk_raise_interval_mins = 90
             "http://localhost:1234/v1/chat/completions"
         );
         assert_eq!(loaded.api_key, "abc");
+        assert_eq!(loaded.llm_prompt, "custom prompt");
         assert_eq!(loaded.cycle_time_secs, 22);
         assert_eq!(loaded.posture_threshold, 6);
         assert_eq!(loaded.alert_threshold, 3);
         assert!(!loaded.desk_raise_enabled);
         assert_eq!(loaded.desk_raise_interval_mins, 90);
+    }
+
+    #[test]
+    fn deserialize_uses_default_prompt_when_field_missing() {
+        let parsed: Config = toml::from_str(
+            r#"
+provider_endpoint = "https://api.openai.com/v1/chat/completions"
+model = "gpt-5.4-mini"
+api_key = ""
+cycle_time_secs = 10
+posture_threshold = 5
+alert_threshold = 2
+desk_raise_enabled = true
+desk_raise_interval_mins = 60
+"#,
+        )
+        .expect("parse config missing llm_prompt");
+
+        assert_eq!(parsed.llm_prompt, super::default_llm_prompt());
     }
 }
