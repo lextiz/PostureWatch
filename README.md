@@ -3,7 +3,9 @@
 [![CI & Release](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml/badge.svg)](https://github.com/lextiz/PostureWatch/actions/workflows/rust.yml)
 [![codecov](https://codecov.io/gh/lextiz/PostureWatch/graph/badge.svg)](https://codecov.io/gh/lextiz/PostureWatch)
 
-PostureWatch is a small desktop app that helps you notice bad posture and remember to take breaks while you work at PC.
+PostureWatch is a small desktop app that helps you notice bad posture and remember to take breaks while you work at a screen.
+
+Many of us spend long hours at a desk these days, and posture usually gets worse long before we notice it.
 
 It uses your webcam together with a vision model to check posture from time to time, then nudges you when it looks like it’s time to sit better, stand up, or step away from the desk.
 
@@ -11,7 +13,7 @@ This project is open source because better desk habits should be easier to build
 
 ## What it does
 
-- Periodically checks posture using a configurable vision-model
+- Periodically checks posture using a configurable vision model
 - Shows persistent reminders until posture improves
 - Reminds you to raise your desk or take a break
 - Runs quietly in the system tray
@@ -26,21 +28,19 @@ This project is open source because better desk habits should be easier to build
 
 At the moment, OpenAI is the supported provider.
 
-## Privacy and common-sense disclaimer
+## Privacy and trust
 
-PostureWatch uses your webcam and sends posture checks to the vision endpoint you configure, so please use a provider you trust and review its privacy terms.
+PostureWatch uses your webcam and sends posture checks to the vision provider you configure, so please use a provider you trust and review its privacy terms.
 
-PostureWatch is here to help with posture and breaks, not surveillance or invasive use. Please use it lawfully, with appropriate consent where needed.
+It is built to help with posture and breaks, not surveillance or invasive use. Please use it lawfully, with appropriate consent where needed.
 
-Be mindful of your LLM tokens too frequent monitoring and choosing an expensive model (which is not necessary) will cost you.
+Posture checks can cost API tokens, so infrequent checks and reasonably priced models are usually enough.
 
 ## Contributing
 
 If you’d like to help, please see [contribute.md](./contribute.md).
 
-Contributions of all sizes are welcome.
-
-If you like it, a GitHub star is appreciated.
+If this is useful to you, a GitHub star helps more people find it.
 
 ## Roadmap
 
