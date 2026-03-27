@@ -41,7 +41,6 @@ pub fn notify_desk_raise() {
 }
 
 #[cfg(test)]
-#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     #[test]
     fn notifications_do_not_panic() {

@@ -51,15 +51,8 @@ jobs:
       - name: Build
         run: cargo build --verbose
 
-      - name: Install Rust nightly for coverage
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: llvm-tools-preview
-
       - name: Run coverage validation
-        run: cargo +nightly llvm-cov --fail-under-lines 100 --codecov --output-path codecov.json
-        env:
-          RUSTFLAGS: --cfg coverage_nightly
+        run: cargo llvm-cov --fail-under-lines 100 --codecov --output-path codecov.json
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
