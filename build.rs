@@ -6,6 +6,7 @@ fn main() {
     res.set("CompanyName", "PostureWatch Contributors");
     res.set("LegalCopyright", "Copyright (c) PostureWatch Contributors");
     res.set("OriginalFilename", "PostureWatch.exe");
+    res.set_manifest_file("app.manifest");
 
     if let Err(err) = res.compile() {
         panic!("failed to compile Windows resources: {err}");
