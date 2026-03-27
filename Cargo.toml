@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Posture monitoring app with webcam and LLM"
 license = "MIT"
+build = "build.rs"
 
 [[bin]]
 name = "posturewatch"
@@ -30,10 +31,13 @@ native-windows-gui = "1.0"
 native-windows-derive = "1.0"
 tray-icon = "0.16"
 
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
 [target.'cfg(not(windows))'.dependencies]
 notify-rust = "4.10"
 
 [profile.release]
-strip = true
-lto = true
-codegen-units = 1
+strip = false
+lto = "thin"
+codegen-units = 16
