@@ -1,0 +1,97 @@
+name: CI & Release
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            libclang-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libswscale-dev \
+            libavutil-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libgdk-pixbuf2.0-dev \
+            libv4l-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run coverage validation
+        run: cargo llvm-cov --ignore-filename-regex "src/(main|camera|tray|alert|logging)\\.rs" --fail-under-lines 60 --codecov --output-path codecov.json
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: codecov.json
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: lextiz/PostureWatch
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release (exe)
+        run: cargo build --release
+
+      - name: Prepare release artifact
+        shell: pwsh
+        run: |
+          if (Test-Path target/release/posturewatch.exe) {
+            Copy-Item target/release/posturewatch.exe PostureWatch.exe
+          } elseif (Test-Path target/release/PostureWatch.exe) {
+            Copy-Item target/release/PostureWatch.exe PostureWatch.exe
+          } else {
+            throw 'Could not find release executable in target/release'
+          }
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: main-${{ github.run_number }}
+          name: Main build #${{ github.run_number }}
+          generate_release_notes: true
+          files: PostureWatch.exe
