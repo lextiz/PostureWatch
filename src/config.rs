@@ -15,10 +15,34 @@ pub struct Config {
     pub alert_threshold: u32,
     pub desk_raise_enabled: bool,
     pub desk_raise_interval_mins: u64,
+    #[serde(default = "default_break_reminder_enabled")]
+    pub break_reminder_enabled: bool,
+    #[serde(default = "default_break_reminder_after_mins")]
+    pub break_reminder_after_mins: u64,
+    #[serde(default = "default_break_reminder_repeat_secs")]
+    pub break_reminder_repeat_secs: u64,
+    #[serde(default = "default_break_reset_after_mins")]
+    pub break_reset_after_mins: u64,
 }
 
 fn default_llm_prompt() -> String {
     "Rate the primary person's working posture from 1 to 10.\n\nUse the best possible estimate from visible posture cues, even if the full upper body is not visible.\n\n1 = terrible posture (severe slouching, head far forward)\n10 = excellent posture (upright back, shoulders aligned, head balanced)\n\nReply 'N' only if no person is visible, or posture truly cannot be estimated from the image.\n\nDo not return 'N' just because the person is standing, looking aside, partially visible, or briefly using a phone, unless those make posture impossible to judge.\n\nReply with ONLY a single number (1-10) or 'N'.".to_string()
+}
+
+fn default_break_reminder_enabled() -> bool {
+    true
+}
+
+fn default_break_reminder_after_mins() -> u64 {
+    60
+}
+
+fn default_break_reminder_repeat_secs() -> u64 {
+    30
+}
+
+fn default_break_reset_after_mins() -> u64 {
+    5
 }
 
 impl Default for Config {
@@ -33,6 +57,10 @@ impl Default for Config {
             alert_threshold: 2,
             desk_raise_enabled: true,
             desk_raise_interval_mins: 60,
+            break_reminder_enabled: default_break_reminder_enabled(),
+            break_reminder_after_mins: default_break_reminder_after_mins(),
+            break_reminder_repeat_secs: default_break_reminder_repeat_secs(),
+            break_reset_after_mins: default_break_reset_after_mins(),
         }
     }
 }
@@ -117,6 +145,10 @@ mod tests {
         assert_eq!(config.posture_threshold, 5);
         assert_eq!(config.alert_threshold, 2);
         assert!(config.desk_raise_enabled);
+        assert!(config.break_reminder_enabled);
+        assert_eq!(config.break_reminder_after_mins, 60);
+        assert_eq!(config.break_reminder_repeat_secs, 30);
+        assert_eq!(config.break_reset_after_mins, 5);
     }
 
     #[test]
@@ -137,6 +169,22 @@ mod tests {
         assert_eq!(
             parsed.desk_raise_interval_mins,
             default_config.desk_raise_interval_mins
+        );
+        assert_eq!(
+            parsed.break_reminder_enabled,
+            default_config.break_reminder_enabled
+        );
+        assert_eq!(
+            parsed.break_reminder_after_mins,
+            default_config.break_reminder_after_mins
+        );
+        assert_eq!(
+            parsed.break_reminder_repeat_secs,
+            default_config.break_reminder_repeat_secs
+        );
+        assert_eq!(
+            parsed.break_reset_after_mins,
+            default_config.break_reset_after_mins
         );
     }
 
@@ -209,6 +257,10 @@ posture_threshold = 6
 alert_threshold = 3
 desk_raise_enabled = false
 desk_raise_interval_mins = 90
+break_reminder_enabled = false
+break_reminder_after_mins = 45
+break_reminder_repeat_secs = 15
+break_reset_after_mins = 7
 "#,
         )
         .expect("write valid config");
@@ -227,6 +279,10 @@ desk_raise_interval_mins = 90
         assert_eq!(loaded.alert_threshold, 3);
         assert!(!loaded.desk_raise_enabled);
         assert_eq!(loaded.desk_raise_interval_mins, 90);
+        assert!(!loaded.break_reminder_enabled);
+        assert_eq!(loaded.break_reminder_after_mins, 45);
+        assert_eq!(loaded.break_reminder_repeat_secs, 15);
+        assert_eq!(loaded.break_reset_after_mins, 7);
     }
 
     #[test]
@@ -246,5 +302,9 @@ desk_raise_interval_mins = 60
         .expect("parse config missing llm_prompt");
 
         assert_eq!(parsed.llm_prompt, super::default_llm_prompt());
+        assert!(parsed.break_reminder_enabled);
+        assert_eq!(parsed.break_reminder_after_mins, 60);
+        assert_eq!(parsed.break_reminder_repeat_secs, 30);
+        assert_eq!(parsed.break_reset_after_mins, 5);
     }
 }
