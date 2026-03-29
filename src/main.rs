@@ -93,6 +93,10 @@ async fn main() {
             log_error!("Failed to capture frame");
         }
 
+        if !current_config.keep_camera_on {
+            camera_state.shutdown();
+        }
+
         sleep(Duration::from_secs(current_config.cycle_time_secs)).await;
     }
 
