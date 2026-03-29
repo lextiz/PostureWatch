@@ -139,6 +139,10 @@ impl TrayManager {
         let mut interval_input = nwg::TextInput::default();
         let mut desk_raise_check = nwg::CheckBox::default();
         let mut desk_raise_input = nwg::TextInput::default();
+        let mut break_reminder_check = nwg::CheckBox::default();
+        let mut break_after_input = nwg::TextInput::default();
+        let mut break_repeat_input = nwg::TextInput::default();
+        let mut break_reset_input = nwg::TextInput::default();
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
@@ -153,9 +157,12 @@ impl TrayManager {
         let mut lbl7 = nwg::Label::default();
         let mut lbl8 = nwg::Label::default();
         let mut lbl9 = nwg::Label::default();
+        let mut lbl10 = nwg::Label::default();
+        let mut lbl11 = nwg::Label::default();
+        let mut lbl12 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 460))
+            .size((420, 560))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -283,17 +290,75 @@ impl TrayManager {
             .build(&mut lbl7)
             .ok();
 
+        // Break reminder
+        nwg::CheckBox::builder()
+            .text("Break reminder")
+            .position((20, 195))
+            .size((130, 22))
+            .parent(&window)
+            .check_state(if cfg.break_reminder_enabled {
+                nwg::CheckBoxState::Checked
+            } else {
+                nwg::CheckBoxState::Unchecked
+            })
+            .build(&mut break_reminder_check)
+            .ok();
+        nwg::TextInput::builder()
+            .text(&cfg.break_reminder_after_mins.to_string())
+            .position((160, 195))
+            .size((50, 22))
+            .parent(&window)
+            .build(&mut break_after_input)
+            .ok();
+        nwg::Label::builder()
+            .text("after mins (1-480)")
+            .position((220, 197))
+            .size((170, 22))
+            .parent(&window)
+            .build(&mut lbl10)
+            .ok();
+
+        nwg::TextInput::builder()
+            .text(&cfg.break_reminder_repeat_secs.to_string())
+            .position((160, 227))
+            .size((50, 22))
+            .parent(&window)
+            .build(&mut break_repeat_input)
+            .ok();
+        nwg::Label::builder()
+            .text("repeat secs (5-600)")
+            .position((220, 229))
+            .size((170, 22))
+            .parent(&window)
+            .build(&mut lbl11)
+            .ok();
+
+        nwg::TextInput::builder()
+            .text(&cfg.break_reset_after_mins.to_string())
+            .position((160, 259))
+            .size((50, 22))
+            .parent(&window)
+            .build(&mut break_reset_input)
+            .ok();
+        nwg::Label::builder()
+            .text("reset mins away (1-120)")
+            .position((220, 261))
+            .size((190, 22))
+            .parent(&window)
+            .build(&mut lbl12)
+            .ok();
+
         // Advanced prompt
         nwg::Label::builder()
             .text("Advanced: LLM prompt")
-            .position((20, 195))
+            .position((20, 294))
             .size((380, 22))
             .parent(&window)
             .build(&mut lbl9)
             .ok();
         nwg::TextBox::builder()
             .text(&cfg.llm_prompt)
-            .position((20, 220))
+            .position((20, 319))
             .size((380, 180))
             .parent(&window)
             .focus(true)
@@ -303,14 +368,14 @@ impl TrayManager {
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 410))
+            .position((200, 510))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 410))
+            .position((310, 510))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -327,9 +392,13 @@ impl TrayManager {
         let interval_input = Rc::new(RefCell::new(interval_input));
         let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
+        let break_reminder_check = Rc::new(RefCell::new(break_reminder_check));
+        let break_after_input = Rc::new(RefCell::new(break_after_input));
+        let break_repeat_input = Rc::new(RefCell::new(break_repeat_input));
+        let break_reset_input = Rc::new(RefCell::new(break_reset_input));
         let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, drc, dri, lpi) = (
+        let (ak, mi, pt, at, ii, drc, dri, brc, bai, bri, bsi, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
@@ -337,6 +406,10 @@ impl TrayManager {
             interval_input.clone(),
             desk_raise_check.clone(),
             desk_raise_input.clone(),
+            break_reminder_check.clone(),
+            break_after_input.clone(),
+            break_repeat_input.clone(),
+            break_reset_input.clone(),
             llm_prompt_input.clone(),
         );
 
@@ -382,6 +455,39 @@ impl TrayManager {
                         return;
                     }
                 };
+                let break_after_mins: u64 = match bai.borrow().text().parse() {
+                    Ok(v) if (1..=480).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Break reminder after must be 1-480 minutes",
+                        );
+                        return;
+                    }
+                };
+                let break_repeat_secs: u64 = match bri.borrow().text().parse() {
+                    Ok(v) if (5..=600).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Break repeat interval must be 5-600 seconds",
+                        );
+                        return;
+                    }
+                };
+                let break_reset_mins: u64 = match bsi.borrow().text().parse() {
+                    Ok(v) if (1..=120).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Break reset away time must be 1-120 minutes",
+                        );
+                        return;
+                    }
+                };
 
                 let model = mi.borrow().text();
                 if model.trim().is_empty() {
@@ -404,6 +510,11 @@ impl TrayManager {
                 new_cfg.desk_raise_enabled =
                     drc.borrow().check_state() == nwg::CheckBoxState::Checked;
                 new_cfg.desk_raise_interval_mins = desk_mins;
+                new_cfg.break_reminder_enabled =
+                    brc.borrow().check_state() == nwg::CheckBoxState::Checked;
+                new_cfg.break_reminder_after_mins = break_after_mins;
+                new_cfg.break_reminder_repeat_secs = break_repeat_secs;
+                new_cfg.break_reset_after_mins = break_reset_mins;
 
                 if new_cfg.save().is_ok() {
                     nwg::modal_info_message(&window_handle, "Saved", "Settings saved.");

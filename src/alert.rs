@@ -30,6 +30,27 @@ pub fn notify_desk_raise() {
         .show();
 }
 
+#[cfg(windows)]
+pub fn notify_break_reminder() {
+    use winrt_notification::{Duration, Sound, Toast};
+    let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+        .title("Posture Watch - Break reminder")
+        .text1("You've been at your desk for a while. Please take a break.")
+        .sound(Some(Sound::Default))
+        .duration(Duration::Long)
+        .show();
+}
+
+#[cfg(not(windows))]
+pub fn notify_break_reminder() {
+    use notify_rust::Notification;
+    let _ = Notification::new()
+        .summary("Posture Watch - Break reminder")
+        .body("You've been at your desk for a while. Please take a break.")
+        .timeout(notify_rust::Timeout::Milliseconds(10000))
+        .show();
+}
+
 #[cfg(not(windows))]
 pub fn notify_desk_raise() {
     use notify_rust::Notification;
@@ -46,5 +67,6 @@ mod tests {
     fn notifications_do_not_panic() {
         super::notify_bad_posture();
         super::notify_desk_raise();
+        super::notify_break_reminder();
     }
 }
