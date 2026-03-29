@@ -31,6 +31,7 @@ pub fn notify_desk_raise() {
 }
 
 #[cfg(windows)]
+#[allow(dead_code)]
 pub fn notify_break_reminder() {
     use winrt_notification::{Duration, Sound, Toast};
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
@@ -41,12 +42,55 @@ pub fn notify_break_reminder() {
         .show();
 }
 
+#[cfg(windows)]
+pub fn notify_session_screen_time_limit() {
+    use winrt_notification::{Duration, Sound, Toast};
+    let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+        .title("Posture Watch - Session limit reached")
+        .text1("Screen time session limit reached. Please take a break.")
+        .sound(Some(Sound::Default))
+        .duration(Duration::Long)
+        .show();
+}
+
+#[cfg(windows)]
+pub fn notify_daily_screen_time_limit() {
+    use winrt_notification::{Duration, Sound, Toast};
+    let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+        .title("Posture Watch - Daily limit reached")
+        .text1("Daily screen time limit reached. Please rest your eyes.")
+        .sound(Some(Sound::Default))
+        .duration(Duration::Long)
+        .show();
+}
+
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn notify_break_reminder() {
     use notify_rust::Notification;
     let _ = Notification::new()
         .summary("Posture Watch - Break reminder")
         .body("You've been at your desk for a while. Please take a break.")
+        .timeout(notify_rust::Timeout::Milliseconds(10000))
+        .show();
+}
+
+#[cfg(not(windows))]
+pub fn notify_session_screen_time_limit() {
+    use notify_rust::Notification;
+    let _ = Notification::new()
+        .summary("Posture Watch - Session limit reached")
+        .body("Screen time session limit reached. Please take a break.")
+        .timeout(notify_rust::Timeout::Milliseconds(10000))
+        .show();
+}
+
+#[cfg(not(windows))]
+pub fn notify_daily_screen_time_limit() {
+    use notify_rust::Notification;
+    let _ = Notification::new()
+        .summary("Posture Watch - Daily limit reached")
+        .body("Daily screen time limit reached. Please rest your eyes.")
         .timeout(notify_rust::Timeout::Milliseconds(10000))
         .show();
 }
@@ -68,5 +112,7 @@ mod tests {
         super::notify_bad_posture();
         super::notify_desk_raise();
         super::notify_break_reminder();
+        super::notify_session_screen_time_limit();
+        super::notify_daily_screen_time_limit();
     }
 }

@@ -3,11 +3,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, AtomicU64};
 
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
 static LAST_POSTURE_SCORE: AtomicU32 = AtomicU32::new(0);
+static DAY_SCREEN_TIME_SECS: AtomicU64 = AtomicU64::new(0);
+static SESSION_SCREEN_TIME_SECS: AtomicU64 = AtomicU64::new(0);
 
 pub fn set_current_posture_status(status: &crate::posture::PostureStatus) {
     let score = match status {
@@ -15,6 +17,19 @@ pub fn set_current_posture_status(status: &crate::posture::PostureStatus) {
         crate::posture::PostureStatus::NoPerson => 0,
     };
     LAST_POSTURE_SCORE.store(score, Ordering::SeqCst);
+}
+
+pub fn set_screen_time(day_secs: u64, session_secs: u64) {
+    DAY_SCREEN_TIME_SECS.store(day_secs, Ordering::SeqCst);
+    SESSION_SCREEN_TIME_SECS.store(session_secs, Ordering::SeqCst);
+}
+
+#[cfg(windows)]
+fn format_duration(total_secs: u64) -> String {
+    let hours = total_secs / 3600;
+    let minutes = (total_secs % 3600) / 60;
+    let seconds = total_secs % 60;
+    format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
 pub struct TrayManager;
@@ -52,7 +67,7 @@ impl TrayManager {
             .with_menu(Box::new(menu))
             .with_tooltip("PostureWatch")
             .build()?;
-        let mut last_tooltip_state = (u32::MAX, false);
+        let mut last_tooltip_state = (u32::MAX, false, u64::MAX, u64::MAX);
 
         let menu_channel = MenuEvent::receiver();
 
@@ -82,18 +97,25 @@ impl TrayManager {
 
                 let score = LAST_POSTURE_SCORE.load(Ordering::SeqCst);
                 let monitoring_enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
-                if last_tooltip_state != (score, monitoring_enabled) {
+                let day_secs = DAY_SCREEN_TIME_SECS.load(Ordering::SeqCst);
+                let session_secs = SESSION_SCREEN_TIME_SECS.load(Ordering::SeqCst);
+                if last_tooltip_state != (score, monitoring_enabled, day_secs, session_secs) {
                     let tooltip = if monitoring_enabled {
+                        let times = format!(
+                            " | Today: {} | Session: {}",
+                            format_duration(day_secs),
+                            format_duration(session_secs)
+                        );
                         if score == 0 {
-                            "PostureWatch | Score: n/a".to_string()
+                            format!("PostureWatch | Score: n/a{times}")
                         } else {
-                            format!("PostureWatch | Score: {score}/10")
+                            format!("PostureWatch | Score: {score}/10{times}")
                         }
                     } else {
                         "PostureWatch (Paused)".to_string()
                     };
                     let _ = tray.set_tooltip(Some(tooltip));
-                    last_tooltip_state = (score, monitoring_enabled);
+                    last_tooltip_state = (score, monitoring_enabled, day_secs, session_secs);
                 }
 
                 while PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_REMOVE) != 0 {
@@ -141,8 +163,8 @@ impl TrayManager {
         let mut desk_raise_input = nwg::TextInput::default();
         let mut break_reminder_check = nwg::CheckBox::default();
         let mut break_after_input = nwg::TextInput::default();
+        let mut day_limit_input = nwg::TextInput::default();
         let mut break_repeat_input = nwg::TextInput::default();
-        let mut break_reset_input = nwg::TextInput::default();
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
@@ -304,29 +326,29 @@ impl TrayManager {
             .build(&mut break_reminder_check)
             .ok();
         nwg::TextInput::builder()
-            .text(&cfg.break_reminder_after_mins.to_string())
+            .text(&cfg.max_session_screen_time_mins.to_string())
             .position((160, 195))
             .size((50, 22))
             .parent(&window)
             .build(&mut break_after_input)
             .ok();
         nwg::Label::builder()
-            .text("after mins (1-480)")
+            .text("session max mins (1-480)")
             .position((220, 197))
-            .size((170, 22))
+            .size((180, 22))
             .parent(&window)
             .build(&mut lbl10)
             .ok();
 
         nwg::TextInput::builder()
-            .text(&cfg.break_reminder_repeat_secs.to_string())
+            .text(&cfg.max_daily_screen_time_mins.to_string())
             .position((160, 227))
             .size((50, 22))
             .parent(&window)
-            .build(&mut break_repeat_input)
+            .build(&mut day_limit_input)
             .ok();
         nwg::Label::builder()
-            .text("repeat secs (5-600)")
+            .text("day max mins (30-1440)")
             .position((220, 229))
             .size((170, 22))
             .parent(&window)
@@ -334,14 +356,14 @@ impl TrayManager {
             .ok();
 
         nwg::TextInput::builder()
-            .text(&cfg.break_reset_after_mins.to_string())
+            .text(&cfg.break_reminder_repeat_secs.to_string())
             .position((160, 259))
             .size((50, 22))
             .parent(&window)
-            .build(&mut break_reset_input)
+            .build(&mut break_repeat_input)
             .ok();
         nwg::Label::builder()
-            .text("reset mins away (1-120)")
+            .text("notify every secs (5-600)")
             .position((220, 261))
             .size((190, 22))
             .parent(&window)
@@ -394,11 +416,11 @@ impl TrayManager {
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
         let break_reminder_check = Rc::new(RefCell::new(break_reminder_check));
         let break_after_input = Rc::new(RefCell::new(break_after_input));
+        let day_limit_input = Rc::new(RefCell::new(day_limit_input));
         let break_repeat_input = Rc::new(RefCell::new(break_repeat_input));
-        let break_reset_input = Rc::new(RefCell::new(break_reset_input));
         let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, drc, dri, brc, bai, bri, bsi, lpi) = (
+        let (ak, mi, pt, at, ii, drc, dri, brc, bai, dli, bri, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
@@ -408,8 +430,8 @@ impl TrayManager {
             desk_raise_input.clone(),
             break_reminder_check.clone(),
             break_after_input.clone(),
+            day_limit_input.clone(),
             break_repeat_input.clone(),
-            break_reset_input.clone(),
             llm_prompt_input.clone(),
         );
 
@@ -466,6 +488,17 @@ impl TrayManager {
                         return;
                     }
                 };
+                let day_limit_mins: u64 = match dli.borrow().text().parse() {
+                    Ok(v) if (30..=1440).contains(&v) => v,
+                    _ => {
+                        nwg::modal_info_message(
+                            &window_handle,
+                            "Error",
+                            "Daily screen time max must be 30-1440 minutes",
+                        );
+                        return;
+                    }
+                };
                 let break_repeat_secs: u64 = match bri.borrow().text().parse() {
                     Ok(v) if (5..=600).contains(&v) => v,
                     _ => {
@@ -477,18 +510,6 @@ impl TrayManager {
                         return;
                     }
                 };
-                let break_reset_mins: u64 = match bsi.borrow().text().parse() {
-                    Ok(v) if (1..=120).contains(&v) => v,
-                    _ => {
-                        nwg::modal_info_message(
-                            &window_handle,
-                            "Error",
-                            "Break reset away time must be 1-120 minutes",
-                        );
-                        return;
-                    }
-                };
-
                 let model = mi.borrow().text();
                 if model.trim().is_empty() {
                     nwg::modal_info_message(&window_handle, "Error", "Model cannot be empty");
@@ -512,9 +533,9 @@ impl TrayManager {
                 new_cfg.desk_raise_interval_mins = desk_mins;
                 new_cfg.break_reminder_enabled =
                     brc.borrow().check_state() == nwg::CheckBoxState::Checked;
-                new_cfg.break_reminder_after_mins = break_after_mins;
+                new_cfg.max_session_screen_time_mins = break_after_mins;
+                new_cfg.max_daily_screen_time_mins = day_limit_mins;
                 new_cfg.break_reminder_repeat_secs = break_repeat_secs;
-                new_cfg.break_reset_after_mins = break_reset_mins;
 
                 if new_cfg.save().is_ok() {
                     nwg::modal_info_message(&window_handle, "Saved", "Settings saved.");

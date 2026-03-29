@@ -18,7 +18,10 @@ pub struct Config {
     #[serde(default = "default_break_reminder_enabled")]
     pub break_reminder_enabled: bool,
     #[serde(default = "default_break_reminder_after_mins")]
-    pub break_reminder_after_mins: u64,
+    #[serde(alias = "break_reminder_after_mins")]
+    pub max_session_screen_time_mins: u64,
+    #[serde(default = "default_max_daily_screen_time_mins")]
+    pub max_daily_screen_time_mins: u64,
     #[serde(default = "default_break_reminder_repeat_secs")]
     pub break_reminder_repeat_secs: u64,
     #[serde(default = "default_break_reset_after_mins")]
@@ -35,6 +38,10 @@ fn default_break_reminder_enabled() -> bool {
 
 fn default_break_reminder_after_mins() -> u64 {
     60
+}
+
+fn default_max_daily_screen_time_mins() -> u64 {
+    480
 }
 
 fn default_break_reminder_repeat_secs() -> u64 {
@@ -58,7 +65,8 @@ impl Default for Config {
             desk_raise_enabled: true,
             desk_raise_interval_mins: 60,
             break_reminder_enabled: default_break_reminder_enabled(),
-            break_reminder_after_mins: default_break_reminder_after_mins(),
+            max_session_screen_time_mins: default_break_reminder_after_mins(),
+            max_daily_screen_time_mins: default_max_daily_screen_time_mins(),
             break_reminder_repeat_secs: default_break_reminder_repeat_secs(),
             break_reset_after_mins: default_break_reset_after_mins(),
         }
@@ -146,7 +154,8 @@ mod tests {
         assert_eq!(config.alert_threshold, 2);
         assert!(config.desk_raise_enabled);
         assert!(config.break_reminder_enabled);
-        assert_eq!(config.break_reminder_after_mins, 60);
+        assert_eq!(config.max_session_screen_time_mins, 60);
+        assert_eq!(config.max_daily_screen_time_mins, 480);
         assert_eq!(config.break_reminder_repeat_secs, 30);
         assert_eq!(config.break_reset_after_mins, 5);
     }
@@ -175,8 +184,12 @@ mod tests {
             default_config.break_reminder_enabled
         );
         assert_eq!(
-            parsed.break_reminder_after_mins,
-            default_config.break_reminder_after_mins
+            parsed.max_session_screen_time_mins,
+            default_config.max_session_screen_time_mins
+        );
+        assert_eq!(
+            parsed.max_daily_screen_time_mins,
+            default_config.max_daily_screen_time_mins
         );
         assert_eq!(
             parsed.break_reminder_repeat_secs,
@@ -259,6 +272,7 @@ desk_raise_enabled = false
 desk_raise_interval_mins = 90
 break_reminder_enabled = false
 break_reminder_after_mins = 45
+max_daily_screen_time_mins = 420
 break_reminder_repeat_secs = 15
 break_reset_after_mins = 7
 "#,
@@ -280,7 +294,8 @@ break_reset_after_mins = 7
         assert!(!loaded.desk_raise_enabled);
         assert_eq!(loaded.desk_raise_interval_mins, 90);
         assert!(!loaded.break_reminder_enabled);
-        assert_eq!(loaded.break_reminder_after_mins, 45);
+        assert_eq!(loaded.max_session_screen_time_mins, 45);
+        assert_eq!(loaded.max_daily_screen_time_mins, 420);
         assert_eq!(loaded.break_reminder_repeat_secs, 15);
         assert_eq!(loaded.break_reset_after_mins, 7);
     }
@@ -303,7 +318,8 @@ desk_raise_interval_mins = 60
 
         assert_eq!(parsed.llm_prompt, super::default_llm_prompt());
         assert!(parsed.break_reminder_enabled);
-        assert_eq!(parsed.break_reminder_after_mins, 60);
+        assert_eq!(parsed.max_session_screen_time_mins, 60);
+        assert_eq!(parsed.max_daily_screen_time_mins, 480);
         assert_eq!(parsed.break_reminder_repeat_secs, 30);
         assert_eq!(parsed.break_reset_after_mins, 5);
     }
