@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default = "default_llm_prompt")]
     pub llm_prompt: String,
     pub cycle_time_secs: u64,
+    #[serde(default = "default_keep_camera_on")]
+    pub keep_camera_on: bool,
     pub posture_threshold: u32,
     pub alert_threshold: u32,
     pub desk_raise_enabled: bool,
@@ -52,6 +54,10 @@ fn default_break_reset_after_mins() -> u64 {
     5
 }
 
+fn default_keep_camera_on() -> bool {
+    true
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -60,6 +66,7 @@ impl Default for Config {
             api_key: String::new(),
             llm_prompt: default_llm_prompt(),
             cycle_time_secs: 10,
+            keep_camera_on: default_keep_camera_on(),
             posture_threshold: 5,
             alert_threshold: 2,
             desk_raise_enabled: true,
@@ -152,6 +159,7 @@ mod tests {
 
         assert_eq!(config.posture_threshold, 5);
         assert_eq!(config.alert_threshold, 2);
+        assert!(config.keep_camera_on);
         assert!(config.desk_raise_enabled);
         assert!(config.break_reminder_enabled);
         assert_eq!(config.max_session_screen_time_mins, 60);
@@ -172,6 +180,7 @@ mod tests {
         assert_eq!(parsed.api_key, default_config.api_key);
         assert_eq!(parsed.llm_prompt, default_config.llm_prompt);
         assert_eq!(parsed.cycle_time_secs, default_config.cycle_time_secs);
+        assert_eq!(parsed.keep_camera_on, default_config.keep_camera_on);
         assert_eq!(parsed.posture_threshold, default_config.posture_threshold);
         assert_eq!(parsed.alert_threshold, default_config.alert_threshold);
         assert_eq!(parsed.desk_raise_enabled, default_config.desk_raise_enabled);
@@ -266,6 +275,7 @@ model = "test-model"
 api_key = "abc"
 llm_prompt = "custom prompt"
 cycle_time_secs = 22
+keep_camera_on = false
 posture_threshold = 6
 alert_threshold = 3
 desk_raise_enabled = false
@@ -289,6 +299,7 @@ break_reset_after_mins = 7
         assert_eq!(loaded.api_key, "abc");
         assert_eq!(loaded.llm_prompt, "custom prompt");
         assert_eq!(loaded.cycle_time_secs, 22);
+        assert!(!loaded.keep_camera_on);
         assert_eq!(loaded.posture_threshold, 6);
         assert_eq!(loaded.alert_threshold, 3);
         assert!(!loaded.desk_raise_enabled);
@@ -317,6 +328,7 @@ desk_raise_interval_mins = 60
         .expect("parse config missing llm_prompt");
 
         assert_eq!(parsed.llm_prompt, super::default_llm_prompt());
+        assert!(parsed.keep_camera_on);
         assert!(parsed.break_reminder_enabled);
         assert_eq!(parsed.max_session_screen_time_mins, 60);
         assert_eq!(parsed.max_daily_screen_time_mins, 480);

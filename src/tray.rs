@@ -159,6 +159,7 @@ impl TrayManager {
         let mut posture_threshold_input = nwg::TextInput::default();
         let mut alert_threshold_input = nwg::TextInput::default();
         let mut interval_input = nwg::TextInput::default();
+        let mut keep_camera_on_check = nwg::CheckBox::default();
         let mut desk_raise_check = nwg::CheckBox::default();
         let mut desk_raise_input = nwg::TextInput::default();
         let mut break_reminder_check = nwg::CheckBox::default();
@@ -184,7 +185,7 @@ impl TrayManager {
         let mut lbl12 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 560))
+            .size((420, 610))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -284,10 +285,23 @@ impl TrayManager {
             .build(&mut lbl6)
             .ok();
 
+        nwg::CheckBox::builder()
+            .text("Keep camera on between checks")
+            .position((20, 155))
+            .size((260, 22))
+            .parent(&window)
+            .check_state(if cfg.keep_camera_on {
+                nwg::CheckBoxState::Checked
+            } else {
+                nwg::CheckBoxState::Unchecked
+            })
+            .build(&mut keep_camera_on_check)
+            .ok();
+
         // Stand reminder
         nwg::CheckBox::builder()
             .text("Stand reminder")
-            .position((20, 160))
+            .position((20, 190))
             .size((130, 22))
             .parent(&window)
             .check_state(if cfg.desk_raise_enabled {
@@ -299,14 +313,14 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.desk_raise_interval_mins.to_string())
-            .position((160, 160))
+            .position((160, 190))
             .size((50, 22))
             .parent(&window)
             .build(&mut desk_raise_input)
             .ok();
         nwg::Label::builder()
             .text("minutes (1-480)")
-            .position((220, 162))
+            .position((220, 192))
             .size((170, 22))
             .parent(&window)
             .build(&mut lbl7)
@@ -315,7 +329,7 @@ impl TrayManager {
         // Break reminder
         nwg::CheckBox::builder()
             .text("Break reminder")
-            .position((20, 195))
+            .position((20, 225))
             .size((130, 22))
             .parent(&window)
             .check_state(if cfg.break_reminder_enabled {
@@ -327,14 +341,14 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.max_session_screen_time_mins.to_string())
-            .position((160, 195))
+            .position((160, 225))
             .size((50, 22))
             .parent(&window)
             .build(&mut break_after_input)
             .ok();
         nwg::Label::builder()
             .text("session max mins (1-480)")
-            .position((220, 197))
+            .position((220, 227))
             .size((180, 22))
             .parent(&window)
             .build(&mut lbl10)
@@ -342,14 +356,14 @@ impl TrayManager {
 
         nwg::TextInput::builder()
             .text(&cfg.max_daily_screen_time_mins.to_string())
-            .position((160, 227))
+            .position((160, 257))
             .size((50, 22))
             .parent(&window)
             .build(&mut day_limit_input)
             .ok();
         nwg::Label::builder()
             .text("day max mins (30-1440)")
-            .position((220, 229))
+            .position((220, 259))
             .size((170, 22))
             .parent(&window)
             .build(&mut lbl11)
@@ -357,14 +371,14 @@ impl TrayManager {
 
         nwg::TextInput::builder()
             .text(&cfg.break_reminder_repeat_secs.to_string())
-            .position((160, 259))
+            .position((160, 289))
             .size((50, 22))
             .parent(&window)
             .build(&mut break_repeat_input)
             .ok();
         nwg::Label::builder()
             .text("notify every secs (5-600)")
-            .position((220, 261))
+            .position((220, 291))
             .size((190, 22))
             .parent(&window)
             .build(&mut lbl12)
@@ -373,15 +387,15 @@ impl TrayManager {
         // Advanced prompt
         nwg::Label::builder()
             .text("Advanced: LLM prompt")
-            .position((20, 294))
+            .position((20, 324))
             .size((380, 22))
             .parent(&window)
             .build(&mut lbl9)
             .ok();
         nwg::TextBox::builder()
             .text(&cfg.llm_prompt)
-            .position((20, 319))
-            .size((380, 180))
+            .position((20, 349))
+            .size((380, 190))
             .parent(&window)
             .focus(true)
             .build(&mut llm_prompt_input)
@@ -390,14 +404,14 @@ impl TrayManager {
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 510))
+            .position((200, 550))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 510))
+            .position((310, 550))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -413,6 +427,7 @@ impl TrayManager {
         let alert_threshold_input = Rc::new(RefCell::new(alert_threshold_input));
         let interval_input = Rc::new(RefCell::new(interval_input));
         let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
+        let keep_camera_on_check = Rc::new(RefCell::new(keep_camera_on_check));
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
         let break_reminder_check = Rc::new(RefCell::new(break_reminder_check));
         let break_after_input = Rc::new(RefCell::new(break_after_input));
@@ -420,12 +435,13 @@ impl TrayManager {
         let break_repeat_input = Rc::new(RefCell::new(break_repeat_input));
         let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, drc, dri, brc, bai, dli, bri, lpi) = (
+        let (ak, mi, pt, at, ii, kco, drc, dri, brc, bai, dli, bri, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
             alert_threshold_input.clone(),
             interval_input.clone(),
+            keep_camera_on_check.clone(),
             desk_raise_check.clone(),
             desk_raise_input.clone(),
             break_reminder_check.clone(),
@@ -528,6 +544,7 @@ impl TrayManager {
                 new_cfg.posture_threshold = posture_th;
                 new_cfg.alert_threshold = alert_th;
                 new_cfg.cycle_time_secs = interval;
+                new_cfg.keep_camera_on = kco.borrow().check_state() == nwg::CheckBoxState::Checked;
                 new_cfg.desk_raise_enabled =
                     drc.borrow().check_state() == nwg::CheckBoxState::Checked;
                 new_cfg.desk_raise_interval_mins = desk_mins;
