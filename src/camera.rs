@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
 use crate::log_info;
+use anyhow::{Context, Result};
 use nokhwa::{
     pixel_format::RgbFormat,
     utils::{CameraIndex, RequestedFormat, RequestedFormatType},
