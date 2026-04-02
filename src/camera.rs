@@ -1,14 +1,19 @@
+use crate::log_info;
 use anyhow::{Context, Result};
 use nokhwa::{
     pixel_format::RgbFormat,
     utils::{CameraIndex, RequestedFormat, RequestedFormatType},
     Camera,
 };
+use std::collections::HashSet;
 
 pub struct CameraState {
     camera: Option<Camera>,
     camera_index: u32,
     last_valid_index: Option<u32>,
+    current_index: Option<u32>,
+    skipped_indexes: HashSet<u32>,
+    black_frame_streak: u32,
 }
 
 impl CameraState {
@@ -17,6 +22,9 @@ impl CameraState {
             camera: None,
             camera_index: 0,
             last_valid_index: None,
+            current_index: None,
+            skipped_indexes: HashSet::new(),
+            black_frame_streak: 0,
         }
     }
 
@@ -34,10 +42,19 @@ impl CameraState {
                 Ok(frame) => {
                     let buffer = frame.buffer();
                     let (w, h) = (frame.resolution().width(), frame.resolution().height());
+                    if self.is_mostly_black_frame(buffer, w, h) {
+                        self.black_frame_streak += 1;
+                        if self.black_frame_streak >= 3 {
+                            self.rotate_from_current_camera("camera returned only black frames");
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(200));
+                        continue;
+                    }
+                    self.black_frame_streak = 0;
                     return self.convert_to_jpeg(buffer, w, h);
                 }
                 Err(_) => {
-                    self.camera = None;
+                    self.rotate_from_current_camera("camera frame capture failed");
                     std::thread::sleep(std::time::Duration::from_millis(500));
                 }
             }
@@ -48,6 +65,8 @@ impl CameraState {
         if let Some(mut cam) = self.camera.take() {
             let _ = cam.stop_stream();
         }
+        self.current_index = None;
+        self.black_frame_streak = 0;
     }
 
     fn convert_to_jpeg(&self, buffer: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
@@ -158,24 +177,85 @@ impl CameraState {
     }
 
     fn init_camera(&mut self) -> Result<Camera> {
-        const MAX_CAMERAS: u32 = 5;
+        const MAX_CAMERAS: u32 = 12;
 
-        if let Some(idx) = self.last_valid_index {
+        if self.skipped_indexes.len() as u32 >= MAX_CAMERAS {
+            self.skipped_indexes.clear();
+        }
+
+        if let Some(idx) = self
+            .last_valid_index
+            .filter(|idx| !self.skipped_indexes.contains(idx))
+        {
             if let Ok(cam) = self.try_init_camera(idx) {
+                self.current_index = Some(idx);
                 return Ok(cam);
             }
         }
 
         for i in 0..MAX_CAMERAS {
             let idx = (self.camera_index + i) % MAX_CAMERAS;
+            if self.skipped_indexes.contains(&idx) {
+                continue;
+            }
             if let Ok(cam) = self.try_init_camera(idx) {
                 self.camera_index = idx;
                 self.last_valid_index = Some(idx);
+                self.current_index = Some(idx);
                 return Ok(cam);
             }
         }
 
+        self.skipped_indexes.clear();
         anyhow::bail!("No cameras available")
+    }
+
+    fn rotate_from_current_camera(&mut self, reason: &str) {
+        if let Some(idx) = self.current_index {
+            self.skipped_indexes.insert(idx);
+            self.camera_index = idx.saturating_add(1);
+            log_info!("Switching camera from index {}: {}", idx, reason);
+        }
+        self.camera = None;
+        self.current_index = None;
+        self.black_frame_streak = 0;
+    }
+
+    fn is_mostly_black_frame(&self, buffer: &[u8], w: u32, h: u32) -> bool {
+        let pixels = (w as usize) * (h as usize);
+        if pixels == 0 {
+            return true;
+        }
+
+        let stride = if buffer.len() == pixels * 3 {
+            3
+        } else if buffer.len() == pixels * 4 {
+            4
+        } else if buffer.len() == pixels * 2 {
+            2
+        } else {
+            return false;
+        };
+
+        let mut dark = 0usize;
+        let mut sampled = 0usize;
+
+        for chunk in buffer.chunks(stride).step_by(10) {
+            if chunk.len() < stride {
+                continue;
+            }
+            sampled += 1;
+            let luma = if stride == 2 {
+                u32::from(chunk[0])
+            } else {
+                (u32::from(chunk[0]) + u32::from(chunk[1]) + u32::from(chunk[2])) / 3
+            };
+            if luma <= 8 {
+                dark += 1;
+            }
+        }
+
+        sampled > 0 && (dark * 100 / sampled) >= 98
     }
 
     fn try_init_camera(&self, index: u32) -> Result<Camera> {
@@ -305,5 +385,32 @@ mod tests {
             .convert_to_jpeg(&png, 1, 1)
             .expect("encoded image input should convert to jpeg");
         assert_eq!(&encoded_jpeg[0..2], &[0xFF, 0xD8]);
+    }
+
+    #[test]
+    fn detects_mostly_black_frames_across_raw_formats() {
+        let state = CameraState::new();
+        let rgb_black = vec![0_u8; 3 * 100];
+        let rgba_black = vec![0_u8; 4 * 100];
+        let yuyv_black = vec![0_u8; 2 * 100];
+        let rgb_non_black = vec![64_u8; 3 * 100];
+
+        assert!(state.is_mostly_black_frame(&rgb_black, 10, 10));
+        assert!(state.is_mostly_black_frame(&rgba_black, 10, 10));
+        assert!(state.is_mostly_black_frame(&yuyv_black, 10, 10));
+        assert!(!state.is_mostly_black_frame(&rgb_non_black, 10, 10));
+    }
+
+    #[test]
+    fn rotate_marks_current_camera_for_retry_later() {
+        let mut state = CameraState::new();
+        state.current_index = Some(2);
+
+        state.rotate_from_current_camera("test");
+
+        assert!(state.camera.is_none());
+        assert!(state.current_index.is_none());
+        assert!(state.skipped_indexes.contains(&2));
+        assert_eq!(state.camera_index, 3);
     }
 }
