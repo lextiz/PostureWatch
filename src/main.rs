@@ -48,6 +48,13 @@ async fn main() {
 
     tray::TrayManager::setup_tray(config_arc);
 
+    if let Err(e) = analyzer.validate_api_access(&config).await {
+        let config_path = Config::config_path()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "your PostureWatch config.toml".to_string());
+        alert::notify_api_setup_needed(&config_path, &e.to_string());
+    }
+
     while APP_RUNNING.load(Ordering::SeqCst) {
         if !MONITORING_ENABLED.load(Ordering::SeqCst) {
             if was_monitoring_enabled {

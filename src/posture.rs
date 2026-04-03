@@ -59,16 +59,49 @@ impl PostureAnalyzer {
             .send()
             .await?;
 
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            log_error!("API error {}: {}", status, text);
-            anyhow::bail!("API error {}: {}", status, text);
-        }
+        let resp = ensure_success_response(resp).await?;
 
         let response_json: serde_json::Value = resp.json().await?;
         parse_api_response(&response_json)
     }
+
+    pub async fn validate_api_access(&self, config: &Config) -> Result<()> {
+        if config.api_key.is_empty() {
+            anyhow::bail!("API key not configured");
+        }
+
+        let body = json!({
+            "model": config.model,
+            "messages": [{
+                "role": "user",
+                "content": "Reply with OK."
+            }],
+            "max_completion_tokens": 5,
+            "temperature": 0
+        });
+
+        let resp = self
+            .client
+            .post(&config.provider_endpoint)
+            .header("Authorization", format!("Bearer {}", config.api_key))
+            .json(&body)
+            .send()
+            .await?;
+
+        let _ = ensure_success_response(resp).await?;
+        Ok(())
+    }
+}
+
+async fn ensure_success_response(resp: reqwest::Response) -> Result<reqwest::Response> {
+    if resp.status().is_success() {
+        return Ok(resp);
+    }
+
+    let status = resp.status();
+    let text = resp.text().await.unwrap_or_default();
+    log_error!("API error {}: {}", status, text);
+    anyhow::bail!("API error {}: {}", status, text);
 }
 
 fn parse_api_response(response_json: &serde_json::Value) -> Result<PostureStatus> {
@@ -316,6 +349,25 @@ mod tests {
 
         let err = analyzer
             .analyze(&[0xFF, 0xD8, 0xFF, 0xD9], &config)
+            .await
+            .expect_err("non-success response should return error");
+        assert!(err.to_string().contains("API error"));
+    }
+
+    #[tokio::test]
+    async fn validate_api_access_surfaces_non_success_http_errors() {
+        let endpoint =
+            spawn_one_shot_http_server("401 Unauthorized", r#"{"error":"bad api key"}"#).await;
+
+        let analyzer = PostureAnalyzer::new();
+        let config = Config {
+            api_key: "test-key".to_string(),
+            provider_endpoint: endpoint,
+            ..Config::default()
+        };
+
+        let err = analyzer
+            .validate_api_access(&config)
             .await
             .expect_err("non-success response should return error");
         assert!(err.to_string().contains("API error"));
