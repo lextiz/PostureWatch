@@ -69,6 +69,7 @@ async fn main() {
         was_monitoring_enabled = true;
 
         let current_config = Config::load();
+        camera_state.set_preferred_index(current_config.camera_index);
 
         if should_notify_desk_raise(&current_config, last_desk_raise) {
             alert::notify_desk_raise();

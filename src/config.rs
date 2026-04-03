@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default = "default_llm_prompt")]
     pub llm_prompt: String,
     pub cycle_time_secs: u64,
+    #[serde(default)]
+    pub camera_index: Option<u32>,
     #[serde(default = "default_keep_camera_on")]
     pub keep_camera_on: bool,
     pub posture_threshold: u32,
@@ -66,6 +68,7 @@ impl Default for Config {
             api_key: String::new(),
             llm_prompt: default_llm_prompt(),
             cycle_time_secs: 10,
+            camera_index: None,
             keep_camera_on: default_keep_camera_on(),
             posture_threshold: 5,
             alert_threshold: 2,
@@ -180,6 +183,7 @@ mod tests {
         assert_eq!(parsed.api_key, default_config.api_key);
         assert_eq!(parsed.llm_prompt, default_config.llm_prompt);
         assert_eq!(parsed.cycle_time_secs, default_config.cycle_time_secs);
+        assert_eq!(parsed.camera_index, default_config.camera_index);
         assert_eq!(parsed.keep_camera_on, default_config.keep_camera_on);
         assert_eq!(parsed.posture_threshold, default_config.posture_threshold);
         assert_eq!(parsed.alert_threshold, default_config.alert_threshold);
@@ -275,6 +279,7 @@ model = "test-model"
 api_key = "abc"
 llm_prompt = "custom prompt"
 cycle_time_secs = 22
+camera_index = 1
 keep_camera_on = false
 posture_threshold = 6
 alert_threshold = 3
@@ -299,6 +304,7 @@ break_reset_after_mins = 7
         assert_eq!(loaded.api_key, "abc");
         assert_eq!(loaded.llm_prompt, "custom prompt");
         assert_eq!(loaded.cycle_time_secs, 22);
+        assert_eq!(loaded.camera_index, Some(1));
         assert!(!loaded.keep_camera_on);
         assert_eq!(loaded.posture_threshold, 6);
         assert_eq!(loaded.alert_threshold, 3);
@@ -328,6 +334,7 @@ desk_raise_interval_mins = 60
         .expect("parse config missing llm_prompt");
 
         assert_eq!(parsed.llm_prompt, super::default_llm_prompt());
+        assert!(parsed.camera_index.is_none());
         assert!(parsed.keep_camera_on);
         assert!(parsed.break_reminder_enabled);
         assert_eq!(parsed.max_session_screen_time_mins, 60);

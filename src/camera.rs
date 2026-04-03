@@ -11,6 +11,7 @@ pub struct CameraState {
     camera: Option<Camera>,
     camera_index: u32,
     last_valid_index: Option<u32>,
+    preferred_index: Option<u32>,
     current_index: Option<u32>,
     skipped_indexes: HashSet<u32>,
     black_frame_streak: u32,
@@ -22,6 +23,7 @@ impl CameraState {
             camera: None,
             camera_index: 0,
             last_valid_index: None,
+            preferred_index: None,
             current_index: None,
             skipped_indexes: HashSet::new(),
             black_frame_streak: 0,
@@ -67,6 +69,15 @@ impl CameraState {
         }
         self.current_index = None;
         self.black_frame_streak = 0;
+    }
+
+    pub fn set_preferred_index(&mut self, preferred_index: Option<u32>) {
+        if self.preferred_index != preferred_index {
+            self.preferred_index = preferred_index;
+            self.skipped_indexes.clear();
+            self.last_valid_index = preferred_index;
+            self.shutdown();
+        }
     }
 
     fn convert_to_jpeg(&self, buffer: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
@@ -184,6 +195,18 @@ impl CameraState {
         }
 
         if let Some(idx) = self
+            .preferred_index
+            .filter(|idx| !self.skipped_indexes.contains(idx))
+        {
+            if let Ok(cam) = self.try_init_camera(idx) {
+                self.last_valid_index = Some(idx);
+                self.current_index = Some(idx);
+                log_info!("Using configured camera index {}", idx);
+                return Ok(cam);
+            }
+        }
+
+        if let Some(idx) = self
             .last_valid_index
             .filter(|idx| !self.skipped_indexes.contains(idx))
         {
@@ -202,6 +225,7 @@ impl CameraState {
                 self.camera_index = idx;
                 self.last_valid_index = Some(idx);
                 self.current_index = Some(idx);
+                log_info!("Using camera index {}", idx);
                 return Ok(cam);
             }
         }
@@ -212,6 +236,13 @@ impl CameraState {
 
     fn rotate_from_current_camera(&mut self, reason: &str) {
         if let Some(idx) = self.current_index {
+            if self.preferred_index == Some(idx) {
+                self.preferred_index = None;
+                log_info!(
+                    "Configured camera index {} failed; switching to automatic fallback",
+                    idx
+                );
+            }
             self.skipped_indexes.insert(idx);
             self.camera_index = idx.saturating_add(1);
             log_info!("Switching camera from index {}: {}", idx, reason);
@@ -412,5 +443,20 @@ mod tests {
         assert!(state.current_index.is_none());
         assert!(state.skipped_indexes.contains(&2));
         assert_eq!(state.camera_index, 3);
+    }
+
+    #[test]
+    fn set_preferred_index_restarts_camera_state() {
+        let mut state = CameraState::new();
+        state.current_index = Some(1);
+        state.last_valid_index = Some(1);
+        state.skipped_indexes.insert(1);
+
+        state.set_preferred_index(Some(2));
+
+        assert_eq!(state.preferred_index, Some(2));
+        assert!(state.current_index.is_none());
+        assert!(state.skipped_indexes.is_empty());
+        assert_eq!(state.last_valid_index, Some(2));
     }
 }
