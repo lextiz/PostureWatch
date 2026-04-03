@@ -107,12 +107,14 @@ pub fn notify_desk_raise() {
 
 #[cfg(windows)]
 pub fn notify_api_setup_needed(config_path: &str, details: &str) {
+    use crate::log_error;
     use winrt_notification::{Duration, Sound, Toast};
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
         .title("Posture Watch setup required")
         .text1("Your API key is missing or not working.")
-        .text2(&format!("Open: {config_path}"))
-        .text3("Get key: platform.openai.com/api-keys")
+        .text2(&format!(
+            "Open: {config_path} | Get key: platform.openai.com/api-keys"
+        ))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
