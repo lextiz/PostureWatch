@@ -159,6 +159,7 @@ impl TrayManager {
         let mut posture_threshold_input = nwg::TextInput::default();
         let mut alert_threshold_input = nwg::TextInput::default();
         let mut interval_input = nwg::TextInput::default();
+        let mut camera_index_input = nwg::TextInput::default();
         let mut keep_camera_on_check = nwg::CheckBox::default();
         let mut desk_raise_check = nwg::CheckBox::default();
         let mut desk_raise_input = nwg::TextInput::default();
@@ -183,9 +184,11 @@ impl TrayManager {
         let mut lbl10 = nwg::Label::default();
         let mut lbl11 = nwg::Label::default();
         let mut lbl12 = nwg::Label::default();
+        let mut lbl13 = nwg::Label::default();
+        let mut lbl14 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 610))
+            .size((420, 640))
             .position((300, 200))
             .title("PostureWatch Settings")
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -287,7 +290,7 @@ impl TrayManager {
 
         nwg::CheckBox::builder()
             .text("Keep camera on between checks")
-            .position((20, 155))
+            .position((20, 185))
             .size((260, 22))
             .parent(&window)
             .check_state(if cfg.keep_camera_on {
@@ -298,10 +301,32 @@ impl TrayManager {
             .build(&mut keep_camera_on_check)
             .ok();
 
+        nwg::Label::builder()
+            .text("Camera index:")
+            .position((20, 155))
+            .size((120, 22))
+            .parent(&window)
+            .build(&mut lbl13)
+            .ok();
+        nwg::TextInput::builder()
+            .text(&cfg.camera_index.map(|v| v.to_string()).unwrap_or_default())
+            .position((150, 153))
+            .size((60, 22))
+            .parent(&window)
+            .build(&mut camera_index_input)
+            .ok();
+        nwg::Label::builder()
+            .text("blank = auto")
+            .position((220, 155))
+            .size((120, 22))
+            .parent(&window)
+            .build(&mut lbl14)
+            .ok();
+
         // Stand reminder
         nwg::CheckBox::builder()
             .text("Stand reminder")
-            .position((20, 190))
+            .position((20, 220))
             .size((130, 22))
             .parent(&window)
             .check_state(if cfg.desk_raise_enabled {
@@ -313,14 +338,14 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.desk_raise_interval_mins.to_string())
-            .position((160, 190))
+            .position((160, 220))
             .size((50, 22))
             .parent(&window)
             .build(&mut desk_raise_input)
             .ok();
         nwg::Label::builder()
             .text("minutes (1-480)")
-            .position((220, 192))
+            .position((220, 222))
             .size((170, 22))
             .parent(&window)
             .build(&mut lbl7)
@@ -329,7 +354,7 @@ impl TrayManager {
         // Break reminder
         nwg::CheckBox::builder()
             .text("Break reminder")
-            .position((20, 225))
+            .position((20, 255))
             .size((130, 22))
             .parent(&window)
             .check_state(if cfg.break_reminder_enabled {
@@ -341,14 +366,14 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.max_session_screen_time_mins.to_string())
-            .position((160, 225))
+            .position((160, 255))
             .size((50, 22))
             .parent(&window)
             .build(&mut break_after_input)
             .ok();
         nwg::Label::builder()
             .text("session max mins (1-480)")
-            .position((220, 227))
+            .position((220, 257))
             .size((180, 22))
             .parent(&window)
             .build(&mut lbl10)
@@ -356,14 +381,14 @@ impl TrayManager {
 
         nwg::TextInput::builder()
             .text(&cfg.max_daily_screen_time_mins.to_string())
-            .position((160, 257))
+            .position((160, 287))
             .size((50, 22))
             .parent(&window)
             .build(&mut day_limit_input)
             .ok();
         nwg::Label::builder()
             .text("day max mins (30-1440)")
-            .position((220, 259))
+            .position((220, 289))
             .size((170, 22))
             .parent(&window)
             .build(&mut lbl11)
@@ -371,14 +396,14 @@ impl TrayManager {
 
         nwg::TextInput::builder()
             .text(&cfg.break_reminder_repeat_secs.to_string())
-            .position((160, 289))
+            .position((160, 319))
             .size((50, 22))
             .parent(&window)
             .build(&mut break_repeat_input)
             .ok();
         nwg::Label::builder()
             .text("notify every secs (5-600)")
-            .position((220, 291))
+            .position((220, 321))
             .size((190, 22))
             .parent(&window)
             .build(&mut lbl12)
@@ -387,14 +412,14 @@ impl TrayManager {
         // Advanced prompt
         nwg::Label::builder()
             .text("Advanced: LLM prompt")
-            .position((20, 324))
+            .position((20, 354))
             .size((380, 22))
             .parent(&window)
             .build(&mut lbl9)
             .ok();
         nwg::TextBox::builder()
             .text(&cfg.llm_prompt)
-            .position((20, 349))
+            .position((20, 379))
             .size((380, 190))
             .parent(&window)
             .focus(true)
@@ -404,14 +429,14 @@ impl TrayManager {
         // Buttons
         nwg::Button::builder()
             .text("Save")
-            .position((200, 550))
+            .position((200, 580))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text("Cancel")
-            .position((310, 550))
+            .position((310, 580))
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
@@ -426,6 +451,7 @@ impl TrayManager {
         let posture_threshold_input = Rc::new(RefCell::new(posture_threshold_input));
         let alert_threshold_input = Rc::new(RefCell::new(alert_threshold_input));
         let interval_input = Rc::new(RefCell::new(interval_input));
+        let camera_index_input = Rc::new(RefCell::new(camera_index_input));
         let desk_raise_check = Rc::new(RefCell::new(desk_raise_check));
         let keep_camera_on_check = Rc::new(RefCell::new(keep_camera_on_check));
         let desk_raise_input = Rc::new(RefCell::new(desk_raise_input));
@@ -435,12 +461,13 @@ impl TrayManager {
         let break_repeat_input = Rc::new(RefCell::new(break_repeat_input));
         let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, kco, drc, dri, brc, bai, dli, bri, lpi) = (
+        let (ak, mi, pt, at, ii, cii, kco, drc, dri, brc, bai, dli, bri, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
             alert_threshold_input.clone(),
             interval_input.clone(),
+            camera_index_input.clone(),
             keep_camera_on_check.clone(),
             desk_raise_check.clone(),
             desk_raise_input.clone(),
@@ -480,6 +507,24 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(&window_handle, "Error", "Interval must be 5-300");
                         return;
+                    }
+                };
+                let camera_index = {
+                    let raw = cii.borrow().text();
+                    if raw.trim().is_empty() {
+                        None
+                    } else {
+                        match raw.parse::<u32>() {
+                            Ok(v) => Some(v),
+                            Err(_) => {
+                                nwg::modal_info_message(
+                                    &window_handle,
+                                    "Error",
+                                    "Camera index must be blank or a non-negative integer",
+                                );
+                                return;
+                            }
+                        }
                     }
                 };
                 let desk_mins: u64 = match dri.borrow().text().parse() {
@@ -544,6 +589,7 @@ impl TrayManager {
                 new_cfg.posture_threshold = posture_th;
                 new_cfg.alert_threshold = alert_th;
                 new_cfg.cycle_time_secs = interval;
+                new_cfg.camera_index = camera_index;
                 new_cfg.keep_camera_on = kco.borrow().check_state() == nwg::CheckBoxState::Checked;
                 new_cfg.desk_raise_enabled =
                     drc.borrow().check_state() == nwg::CheckBoxState::Checked;
