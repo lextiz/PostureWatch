@@ -105,6 +105,32 @@ pub fn notify_desk_raise() {
         .show();
 }
 
+#[cfg(windows)]
+pub fn notify_api_setup_needed(config_path: &str, details: &str) {
+    use winrt_notification::{Duration, Sound, Toast};
+    let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+        .title("Posture Watch setup required")
+        .text1("Your API key is missing or not working.")
+        .text2(&format!("Open: {config_path}"))
+        .text3("Get key: platform.openai.com/api-keys")
+        .sound(Some(Sound::Default))
+        .duration(Duration::Long)
+        .show();
+    log_error!("API setup required: {}", details);
+}
+
+#[cfg(not(windows))]
+pub fn notify_api_setup_needed(config_path: &str, details: &str) {
+    use notify_rust::Notification;
+    let _ = Notification::new()
+        .summary("Posture Watch setup required")
+        .body(&format!(
+            "Your API key is missing or invalid.\n\n1) Open config: {config_path}\n2) Add api_key = \"sk-...\"\n3) Save and restart Posture Watch\n4) Create key: https://platform.openai.com/api-keys\n\nDetails: {details}"
+        ))
+        .timeout(notify_rust::Timeout::Never)
+        .show();
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -114,5 +140,6 @@ mod tests {
         super::notify_break_reminder();
         super::notify_session_screen_time_limit();
         super::notify_daily_screen_time_limit();
+        super::notify_api_setup_needed("config.toml", "test details");
     }
 }
