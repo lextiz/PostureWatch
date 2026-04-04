@@ -120,3 +120,37 @@ jobs:
           name: Main build #${{ github.run_number }}
           generate_release_notes: true
           files: PostureWatch.exe
+
+  release-macos:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [release]
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release (macOS binary)
+        run: cargo build --release
+
+      - name: Prepare release artifact
+        shell: bash
+        run: |
+          if [ -f target/release/posturewatch ]; then
+            cp target/release/posturewatch PostureWatch-macos
+          elif [ -f target/release/PostureWatch ]; then
+            cp target/release/PostureWatch PostureWatch-macos
+          else
+            echo "Could not find release executable in target/release"
+            exit 1
+          fi
+          chmod +x PostureWatch-macos
+
+      - name: Upload macOS binary to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: main-${{ github.run_number }}
+          files: PostureWatch-macos
