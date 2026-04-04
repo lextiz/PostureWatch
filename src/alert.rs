@@ -163,13 +163,76 @@ pub fn notify_api_setup_needed(config_path: &str, details: &str) {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::Config;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time should be monotonic")
+            .as_nanos();
+        std::env::temp_dir().join(format!("posturewatch-{name}-{nanos}"))
+    }
+
+    fn with_language(language: &str, run: impl FnOnce()) {
+        let _guard = env_lock().lock().expect("env lock poisoned");
+        let appdata_root = unique_temp_dir("alert-i18n");
+        let config_path = appdata_root
+            .join("com.posturewatch")
+            .join("PostureWatch")
+            .join("config.toml");
+        fs::create_dir_all(
+            config_path
+                .parent()
+                .expect("config should always have parent directory"),
+        )
+        .expect("create appdata dirs");
+
+        let mut cfg = Config::default();
+        cfg.language = language.to_string();
+        fs::write(
+            &config_path,
+            toml::to_string(&cfg).expect("serialize config"),
+        )
+        .expect("write config");
+
+        let previous_appdata = std::env::var("APPDATA").ok();
+        std::env::set_var("APPDATA", &appdata_root);
+        run();
+
+        if let Some(previous) = previous_appdata {
+            std::env::set_var("APPDATA", previous);
+        } else {
+            std::env::remove_var("APPDATA");
+        }
+    }
+
     #[test]
-    fn notifications_do_not_panic() {
-        super::notify_bad_posture();
-        super::notify_desk_raise();
-        super::notify_break_reminder();
-        super::notify_session_screen_time_limit();
-        super::notify_daily_screen_time_limit();
-        super::notify_api_setup_needed("config.toml", "test details");
+    fn notifications_do_not_panic_in_english_and_russian() {
+        with_language("en", || {
+            super::notify_bad_posture();
+            super::notify_desk_raise();
+            super::notify_break_reminder();
+            super::notify_session_screen_time_limit();
+            super::notify_daily_screen_time_limit();
+            super::notify_api_setup_needed("config.toml", "test details");
+        });
+
+        with_language("ru", || {
+            super::notify_bad_posture();
+            super::notify_desk_raise();
+            super::notify_break_reminder();
+            super::notify_session_screen_time_limit();
+            super::notify_daily_screen_time_limit();
+            super::notify_api_setup_needed("config.toml", "test details");
+        });
     }
 }

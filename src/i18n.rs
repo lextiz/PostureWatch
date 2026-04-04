@@ -20,7 +20,7 @@ impl Language {
     }
 }
 
-#[allow(dead_code)]
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Key {
     Pause,
@@ -130,5 +130,60 @@ pub fn text(language: Language, key: Key) -> &'static str {
         (Language::Ru, Key::ApiSetupSummary) => "Требуется настройка Posture Watch",
         (Language::En, Key::ApiSetupDetails) => "Details",
         (Language::Ru, Key::ApiSetupDetails) => "Детали",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{text, Key, Language};
+
+    const ALL_KEYS: &[Key] = &[
+        Key::Pause,
+        Key::Resume,
+        Key::Configure,
+        Key::About,
+        Key::Exit,
+        Key::TrayToday,
+        Key::TraySession,
+        Key::TrayScore,
+        Key::TrayPaused,
+        Key::SettingsTitle,
+        Key::LanguageLabel,
+        Key::LanguageHint,
+        Key::Save,
+        Key::Cancel,
+        Key::LanguageValidationError,
+        Key::AboutTitle,
+        Key::AboutBody,
+        Key::NotificationApp,
+        Key::BadPosture,
+        Key::StandTitle,
+        Key::StandBody,
+        Key::BreakTitle,
+        Key::BreakBody,
+        Key::SessionLimitTitle,
+        Key::SessionLimitBody,
+        Key::DailyLimitTitle,
+        Key::DailyLimitBody,
+        Key::ApiSetupTitle,
+        Key::ApiSetupBody,
+        Key::ApiSetupSummary,
+        Key::ApiSetupDetails,
+    ];
+
+    #[test]
+    fn language_from_code_defaults_to_english() {
+        assert_eq!(Language::from_code("ru"), Language::Ru);
+        assert_eq!(Language::from_code("RU"), Language::Ru);
+        assert_eq!(Language::from_code("en"), Language::En);
+        assert_eq!(Language::from_code("anything-else"), Language::En);
+    }
+
+    #[test]
+    fn all_translation_keys_have_non_empty_text_for_all_languages() {
+        for key in ALL_KEYS {
+            assert!(!text(Language::En, *key).trim().is_empty());
+            assert!(!text(Language::Ru, *key).trim().is_empty());
+        }
     }
 }
