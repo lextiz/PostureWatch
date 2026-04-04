@@ -3,6 +3,7 @@
 mod alert;
 mod camera;
 mod config;
+mod i18n;
 mod logging;
 mod posture;
 mod posture_monitor;

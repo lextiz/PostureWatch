@@ -1,9 +1,12 @@
+use crate::i18n::{self, Key, Language};
+
 #[cfg(windows)]
 pub fn notify_bad_posture() {
     use winrt_notification::{Duration, Sound, Toast};
+    let language = Language::from_config();
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch")
-        .text1("Please sit up straight!")
+        .title(i18n::text(language, Key::NotificationApp))
+        .text1(i18n::text(language, Key::BadPosture))
         .sound(Some(Sound::Default))
         .duration(Duration::Short)
         .show();
@@ -12,9 +15,10 @@ pub fn notify_bad_posture() {
 #[cfg(not(windows))]
 pub fn notify_bad_posture() {
     use notify_rust::Notification;
+    let language = Language::from_config();
     let _ = Notification::new()
-        .summary("Posture Watch")
-        .body("Please sit up straight!")
+        .summary(i18n::text(language, Key::NotificationApp))
+        .body(i18n::text(language, Key::BadPosture))
         .timeout(notify_rust::Timeout::Milliseconds(5000))
         .show();
 }
@@ -22,9 +26,10 @@ pub fn notify_bad_posture() {
 #[cfg(windows)]
 pub fn notify_desk_raise() {
     use winrt_notification::{Duration, Sound, Toast};
+    let language = Language::from_config();
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch - Stand up!")
-        .text1("Time to raise your desk or stretch your legs.")
+        .title(i18n::text(language, Key::StandTitle))
+        .text1(i18n::text(language, Key::StandBody))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
@@ -34,9 +39,10 @@ pub fn notify_desk_raise() {
 #[allow(dead_code)]
 pub fn notify_break_reminder() {
     use winrt_notification::{Duration, Sound, Toast};
+    let language = Language::from_config();
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch - Break reminder")
-        .text1("You've been at your desk for a while. Please take a break.")
+        .title(i18n::text(language, Key::BreakTitle))
+        .text1(i18n::text(language, Key::BreakBody))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
@@ -45,9 +51,10 @@ pub fn notify_break_reminder() {
 #[cfg(windows)]
 pub fn notify_session_screen_time_limit() {
     use winrt_notification::{Duration, Sound, Toast};
+    let language = Language::from_config();
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch - Session limit reached")
-        .text1("Screen time session limit reached. Please take a break.")
+        .title(i18n::text(language, Key::SessionLimitTitle))
+        .text1(i18n::text(language, Key::SessionLimitBody))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
@@ -56,9 +63,10 @@ pub fn notify_session_screen_time_limit() {
 #[cfg(windows)]
 pub fn notify_daily_screen_time_limit() {
     use winrt_notification::{Duration, Sound, Toast};
+    let language = Language::from_config();
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch - Daily limit reached")
-        .text1("Daily screen time limit reached. Please rest your eyes.")
+        .title(i18n::text(language, Key::DailyLimitTitle))
+        .text1(i18n::text(language, Key::DailyLimitBody))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
@@ -68,9 +76,10 @@ pub fn notify_daily_screen_time_limit() {
 #[allow(dead_code)]
 pub fn notify_break_reminder() {
     use notify_rust::Notification;
+    let language = Language::from_config();
     let _ = Notification::new()
-        .summary("Posture Watch - Break reminder")
-        .body("You've been at your desk for a while. Please take a break.")
+        .summary(i18n::text(language, Key::BreakTitle))
+        .body(i18n::text(language, Key::BreakBody))
         .timeout(notify_rust::Timeout::Milliseconds(10000))
         .show();
 }
@@ -78,9 +87,10 @@ pub fn notify_break_reminder() {
 #[cfg(not(windows))]
 pub fn notify_session_screen_time_limit() {
     use notify_rust::Notification;
+    let language = Language::from_config();
     let _ = Notification::new()
-        .summary("Posture Watch - Session limit reached")
-        .body("Screen time session limit reached. Please take a break.")
+        .summary(i18n::text(language, Key::SessionLimitTitle))
+        .body(i18n::text(language, Key::SessionLimitBody))
         .timeout(notify_rust::Timeout::Milliseconds(10000))
         .show();
 }
@@ -88,9 +98,10 @@ pub fn notify_session_screen_time_limit() {
 #[cfg(not(windows))]
 pub fn notify_daily_screen_time_limit() {
     use notify_rust::Notification;
+    let language = Language::from_config();
     let _ = Notification::new()
-        .summary("Posture Watch - Daily limit reached")
-        .body("Daily screen time limit reached. Please rest your eyes.")
+        .summary(i18n::text(language, Key::DailyLimitTitle))
+        .body(i18n::text(language, Key::DailyLimitBody))
         .timeout(notify_rust::Timeout::Milliseconds(10000))
         .show();
 }
@@ -98,9 +109,10 @@ pub fn notify_daily_screen_time_limit() {
 #[cfg(not(windows))]
 pub fn notify_desk_raise() {
     use notify_rust::Notification;
+    let language = Language::from_config();
     let _ = Notification::new()
-        .summary("Posture Watch - Stand up!")
-        .body("Time to raise your desk or stretch your legs.")
+        .summary(i18n::text(language, Key::StandTitle))
+        .body(i18n::text(language, Key::StandBody))
         .timeout(notify_rust::Timeout::Never)
         .show();
 }
@@ -109,12 +121,17 @@ pub fn notify_desk_raise() {
 pub fn notify_api_setup_needed(config_path: &str, details: &str) {
     use crate::log_error;
     use winrt_notification::{Duration, Sound, Toast};
+
+    let language = Language::from_config();
+    let line2 = match language {
+        Language::En => format!("Open: {config_path} | Get key: platform.openai.com/api-keys"),
+        Language::Ru => format!("Откройте: {config_path} | Ключ: platform.openai.com/api-keys"),
+    };
+
     let _ = Toast::new(Toast::POWERSHELL_APP_ID)
-        .title("Posture Watch setup required")
-        .text1("Your API key is missing or not working.")
-        .text2(&format!(
-            "Open: {config_path} | Get key: platform.openai.com/api-keys"
-        ))
+        .title(i18n::text(language, Key::ApiSetupTitle))
+        .text1(i18n::text(language, Key::ApiSetupBody))
+        .text2(&line2)
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show();
@@ -124,11 +141,22 @@ pub fn notify_api_setup_needed(config_path: &str, details: &str) {
 #[cfg(not(windows))]
 pub fn notify_api_setup_needed(config_path: &str, details: &str) {
     use notify_rust::Notification;
+
+    let language = Language::from_config();
+    let body = match language {
+        Language::En => format!(
+            "Your API key is missing or invalid.\n\n1) Open config: {config_path}\n2) Add api_key = \"sk-...\"\n3) Save and restart Posture Watch\n4) Create key: https://platform.openai.com/api-keys\n\n{}: {details}",
+            i18n::text(language, Key::ApiSetupDetails)
+        ),
+        Language::Ru => format!(
+            "API-ключ отсутствует или неверный.\n\n1) Откройте config: {config_path}\n2) Добавьте api_key = \"sk-...\"\n3) Сохраните и перезапустите Posture Watch\n4) Создайте ключ: https://platform.openai.com/api-keys\n\n{}: {details}",
+            i18n::text(language, Key::ApiSetupDetails)
+        ),
+    };
+
     let _ = Notification::new()
-        .summary("Posture Watch setup required")
-        .body(&format!(
-            "Your API key is missing or invalid.\n\n1) Open config: {config_path}\n2) Add api_key = \"sk-...\"\n3) Save and restart Posture Watch\n4) Create key: https://platform.openai.com/api-keys\n\nDetails: {details}"
-        ))
+        .summary(i18n::text(language, Key::ApiSetupSummary))
+        .body(&body)
         .timeout(notify_rust::Timeout::Never)
         .show();
 }
