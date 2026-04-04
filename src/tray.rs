@@ -5,6 +5,9 @@ use tokio::sync::Mutex as TokioMutex;
 
 use std::sync::atomic::{AtomicU32, AtomicU64};
 
+#[cfg(windows)]
+use crate::i18n::{self, Key, Language};
+
 pub static APP_RUNNING: AtomicBool = AtomicBool::new(true);
 pub static MONITORING_ENABLED: AtomicBool = AtomicBool::new(true);
 static LAST_POSTURE_SCORE: AtomicU32 = AtomicU32::new(0);
@@ -50,16 +53,22 @@ impl TrayManager {
             DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
         };
 
+        let language = Language::from_config();
         let icon = Self::create_icon()?;
-        let pause_item = MenuItem::with_id("pause", "Pause", true, None);
+        let pause_item = MenuItem::with_id("pause", i18n::text(language, Key::Pause), true, None);
 
         let menu = Menu::with_items(&[
-            &MenuItem::with_id("configure", "Configure...", true, None),
+            &MenuItem::with_id(
+                "configure",
+                i18n::text(language, Key::Configure),
+                true,
+                None,
+            ),
             &pause_item,
             &PredefinedMenuItem::separator(),
-            &MenuItem::with_id("about", "About", true, None),
+            &MenuItem::with_id("about", i18n::text(language, Key::About), true, None),
             &PredefinedMenuItem::separator(),
-            &MenuItem::with_id("exit", "Exit", true, None),
+            &MenuItem::with_id("exit", i18n::text(language, Key::Exit), true, None),
         ])?;
 
         let tray = TrayIconBuilder::new()
@@ -80,7 +89,12 @@ impl TrayManager {
                         "pause" => {
                             let enabled = MONITORING_ENABLED.load(Ordering::SeqCst);
                             MONITORING_ENABLED.store(!enabled, Ordering::SeqCst);
-                            pause_item.set_text(if enabled { "Resume" } else { "Pause" });
+                            let language = Language::from_config();
+                            pause_item.set_text(if enabled {
+                                i18n::text(language, Key::Resume)
+                            } else {
+                                i18n::text(language, Key::Pause)
+                            });
                         }
                         "about" => Self::show_about_dialog(),
                         "exit" => {
@@ -100,19 +114,30 @@ impl TrayManager {
                 let day_secs = DAY_SCREEN_TIME_SECS.load(Ordering::SeqCst);
                 let session_secs = SESSION_SCREEN_TIME_SECS.load(Ordering::SeqCst);
                 if last_tooltip_state != (score, monitoring_enabled, day_secs, session_secs) {
+                    let language = Language::from_config();
                     let tooltip = if monitoring_enabled {
                         let times = format!(
-                            " | Today: {} | Session: {}",
+                            " | {}: {} | {}: {}",
+                            i18n::text(language, Key::TrayToday),
                             format_duration(day_secs),
+                            i18n::text(language, Key::TraySession),
                             format_duration(session_secs)
                         );
                         if score == 0 {
-                            format!("PostureWatch | Score: n/a{times}")
+                            format!(
+                                "PostureWatch | {}: n/a{}",
+                                i18n::text(language, Key::TrayScore),
+                                times
+                            )
                         } else {
-                            format!("PostureWatch | Score: {score}/10{times}")
+                            format!(
+                                "PostureWatch | {}: {score}/10{}",
+                                i18n::text(language, Key::TrayScore),
+                                times
+                            )
                         }
                     } else {
-                        "PostureWatch (Paused)".to_string()
+                        i18n::text(language, Key::TrayPaused).to_string()
                     };
                     let _ = tray.set_tooltip(Some(tooltip));
                     last_tooltip_state = (score, monitoring_enabled, day_secs, session_secs);
@@ -153,6 +178,7 @@ impl TrayManager {
         }
 
         let cfg = Config::load();
+        let language = Language::from_code(&cfg.language);
         let mut window = nwg::Window::default();
         let mut api_key_input = nwg::TextInput::default();
         let mut model_input = nwg::TextInput::default();
@@ -167,6 +193,7 @@ impl TrayManager {
         let mut break_after_input = nwg::TextInput::default();
         let mut day_limit_input = nwg::TextInput::default();
         let mut break_repeat_input = nwg::TextInput::default();
+        let mut language_input = nwg::TextInput::default();
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
@@ -187,11 +214,13 @@ impl TrayManager {
         let mut lbl12 = nwg::Label::default();
         let mut lbl13 = nwg::Label::default();
         let mut lbl14 = nwg::Label::default();
+        let mut lbl15 = nwg::Label::default();
+        let mut lbl16 = nwg::Label::default();
 
         nwg::Window::builder()
             .size((420, 640))
             .position((300, 200))
-            .title("PostureWatch Settings")
+            .title(i18n::text(language, Key::SettingsTitle))
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
             .build(&mut window)
             .ok();
@@ -412,16 +441,39 @@ impl TrayManager {
 
         // Advanced prompt
         nwg::Label::builder()
-            .text("Advanced: LLM prompt")
+            .text(i18n::text(language, Key::LanguageLabel))
             .position((20, 354))
-            .size((380, 22))
+            .size((120, 22))
+            .parent(&window)
+            .build(&mut lbl15)
+            .ok();
+        nwg::TextInput::builder()
+            .text(&cfg.language)
+            .position((150, 352))
+            .size((60, 22))
+            .parent(&window)
+            .build(&mut language_input)
+            .ok();
+        nwg::Label::builder()
+            .text(i18n::text(language, Key::LanguageHint))
+            .position((220, 354))
+            .size((180, 22))
             .parent(&window)
             .build(&mut lbl9)
             .ok();
+
+        // Advanced prompt
+        nwg::Label::builder()
+            .text("Advanced: LLM prompt")
+            .position((20, 384))
+            .size((380, 22))
+            .parent(&window)
+            .build(&mut lbl16)
+            .ok();
         nwg::TextBox::builder()
             .text(&cfg.llm_prompt)
-            .position((20, 379))
-            .size((380, 190))
+            .position((20, 409))
+            .size((380, 160))
             .parent(&window)
             .focus(true)
             .build(&mut llm_prompt_input)
@@ -429,14 +481,14 @@ impl TrayManager {
 
         // Buttons
         nwg::Button::builder()
-            .text("Save")
+            .text(i18n::text(language, Key::Save))
             .position((200, 580))
             .size((90, 32))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
-            .text("Cancel")
+            .text(i18n::text(language, Key::Cancel))
             .position((310, 580))
             .size((90, 32))
             .parent(&window)
@@ -497,6 +549,10 @@ impl TrayManager {
                 "Seconds between repeated break reminders while you remain over the limit.",
             )
             .register(
+                &language_input,
+                "UI language code. Use 'en' for English or 'ru' for Russian.",
+            )
+            .register(
                 &llm_prompt_input,
                 "Advanced prompt sent with each image. Only edit if you understand prompt tuning.",
             )
@@ -520,9 +576,10 @@ impl TrayManager {
         let break_after_input = Rc::new(RefCell::new(break_after_input));
         let day_limit_input = Rc::new(RefCell::new(day_limit_input));
         let break_repeat_input = Rc::new(RefCell::new(break_repeat_input));
+        let language_input = Rc::new(RefCell::new(language_input));
         let llm_prompt_input = Rc::new(RefCell::new(llm_prompt_input));
 
-        let (ak, mi, pt, at, ii, cii, kco, drc, dri, brc, bai, dli, bri, lpi) = (
+        let (ak, mi, pt, at, ii, cii, kco, drc, dri, brc, bai, dli, bri, li, lpi) = (
             api_key_input.clone(),
             model_input.clone(),
             posture_threshold_input.clone(),
@@ -536,6 +593,7 @@ impl TrayManager {
             break_after_input.clone(),
             day_limit_input.clone(),
             break_repeat_input.clone(),
+            language_input.clone(),
             llm_prompt_input.clone(),
         );
 
@@ -642,6 +700,15 @@ impl TrayManager {
                     nwg::modal_info_message(&window_handle, "Error", "LLM prompt cannot be empty");
                     return;
                 }
+                let language = li.borrow().text().trim().to_lowercase();
+                if language != "en" && language != "ru" {
+                    nwg::modal_info_message(
+                        &window_handle,
+                        "Error",
+                        i18n::text(Language::from_config(), Key::LanguageValidationError),
+                    );
+                    return;
+                }
 
                 let mut new_cfg = Config::load();
                 new_cfg.api_key = ak.borrow().text();
@@ -660,6 +727,7 @@ impl TrayManager {
                 new_cfg.max_session_screen_time_mins = break_after_mins;
                 new_cfg.max_daily_screen_time_mins = day_limit_mins;
                 new_cfg.break_reminder_repeat_secs = break_repeat_secs;
+                new_cfg.language = language;
 
                 if new_cfg.save().is_ok() {
                     nwg::modal_info_message(&window_handle, "Saved", "Settings saved.");
@@ -679,10 +747,11 @@ impl TrayManager {
     #[cfg(windows)]
     fn show_about_dialog() {
         use native_dialog::{DialogBuilder, MessageLevel};
+        let language = Language::from_config();
         let _ = DialogBuilder::message()
             .set_level(MessageLevel::Info)
-            .set_title("About PostureWatch")
-            .set_text("PostureWatch v1.0\n\nAI-powered posture monitoring.")
+            .set_title(i18n::text(language, Key::AboutTitle))
+            .set_text(i18n::text(language, Key::AboutBody))
             .alert()
             .show();
     }

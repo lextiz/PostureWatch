@@ -30,6 +30,8 @@ pub struct Config {
     pub break_reminder_repeat_secs: u64,
     #[serde(default = "default_break_reset_after_mins")]
     pub break_reset_after_mins: u64,
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 fn default_llm_prompt() -> String {
@@ -60,6 +62,10 @@ fn default_keep_camera_on() -> bool {
     true
 }
 
+fn default_language() -> String {
+    "en".to_string()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -79,6 +85,7 @@ impl Default for Config {
             max_daily_screen_time_mins: default_max_daily_screen_time_mins(),
             break_reminder_repeat_secs: default_break_reminder_repeat_secs(),
             break_reset_after_mins: default_break_reset_after_mins(),
+            language: default_language(),
         }
     }
 }
@@ -212,6 +219,7 @@ mod tests {
             parsed.break_reset_after_mins,
             default_config.break_reset_after_mins
         );
+        assert_eq!(parsed.language, default_config.language);
     }
 
     #[test]
