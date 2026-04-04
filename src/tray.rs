@@ -170,6 +170,7 @@ impl TrayManager {
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
+        let mut config_tooltips = nwg::Tooltip::default();
 
         // Each label needs its own variable to persist
         let mut lbl1 = nwg::Label::default();
@@ -440,6 +441,66 @@ impl TrayManager {
             .size((90, 32))
             .parent(&window)
             .build(&mut cancel_button)
+            .ok();
+
+        nwg::Tooltip::builder()
+            .register(
+                &api_key_input,
+                "API key used to authenticate requests to your LLM provider.",
+            )
+            .register(
+                &model_input,
+                "Vision model name used for posture analysis (for example gpt-5.4-mini).",
+            )
+            .register(
+                &posture_threshold_input,
+                "Minimum posture score (1-10) considered good posture.",
+            )
+            .register(
+                &alert_threshold_input,
+                "Number of consecutive low-score checks before an alert is shown.",
+            )
+            .register(
+                &interval_input,
+                "Seconds between posture checks. Lower values check more often.",
+            )
+            .register(
+                &camera_index_input,
+                "Camera device index. Leave blank to auto-select the default camera.",
+            )
+            .register(
+                &keep_camera_on_check,
+                "Keep camera stream open between checks for faster capture, with higher resource use.",
+            )
+            .register(
+                &desk_raise_check,
+                "Enable periodic stand-up reminders.",
+            )
+            .register(
+                &desk_raise_input,
+                "Minutes between stand-up reminders when enabled.",
+            )
+            .register(
+                &break_reminder_check,
+                "Enable break reminders based on continuous and daily screen time.",
+            )
+            .register(
+                &break_after_input,
+                "Maximum continuous session length in minutes before break reminders start.",
+            )
+            .register(
+                &day_limit_input,
+                "Maximum total daily screen time in minutes before break reminders start.",
+            )
+            .register(
+                &break_repeat_input,
+                "Seconds between repeated break reminders while you remain over the limit.",
+            )
+            .register(
+                &llm_prompt_input,
+                "Advanced prompt sent with each image. Only edit if you understand prompt tuning.",
+            )
+            .build(&mut config_tooltips)
             .ok();
 
         let window_handle = window.handle;
