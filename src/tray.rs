@@ -208,7 +208,6 @@ impl TrayManager {
         let mut lbl6 = nwg::Label::default();
         let mut lbl7 = nwg::Label::default();
         let mut lbl8 = nwg::Label::default();
-        let mut lbl9 = nwg::Label::default();
         let mut lbl10 = nwg::Label::default();
         let mut lbl11 = nwg::Label::default();
         let mut lbl12 = nwg::Label::default();
@@ -218,7 +217,7 @@ impl TrayManager {
         let mut lbl16 = nwg::Label::default();
 
         nwg::Window::builder()
-            .size((420, 640))
+            .size((560, 760))
             .position((300, 200))
             .title(i18n::text(language, Key::SettingsTitle))
             .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE)
@@ -229,14 +228,14 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::ApiKeyLabel))
             .position((20, 20))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl1)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.api_key)
-            .position((150, 18))
-            .size((250, 22))
+            .position((210, 18))
+            .size((330, 24))
             .parent(&window)
             .build(&mut api_key_input)
             .ok();
@@ -245,14 +244,14 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::ModelLabel))
             .position((20, 55))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl8)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.model)
-            .position((150, 53))
-            .size((250, 22))
+            .position((210, 53))
+            .size((330, 24))
             .parent(&window)
             .build(&mut model_input)
             .ok();
@@ -261,36 +260,36 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::PostureThresholdLabel))
             .position((20, 90))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl2)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.posture_threshold.to_string())
-            .position((150, 88))
-            .size((50, 22))
+            .position((210, 88))
+            .size((70, 24))
             .parent(&window)
             .build(&mut posture_threshold_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::PostureRangeHint))
-            .position((205, 90))
-            .size((45, 22))
+            .position((288, 90))
+            .size((60, 24))
             .parent(&window)
             .build(&mut lbl3)
             .ok();
 
         nwg::Label::builder()
             .text(i18n::text(language, Key::AlertsAfterLabel))
-            .position((260, 90))
-            .size((80, 22))
+            .position((360, 90))
+            .size((110, 24))
             .parent(&window)
             .build(&mut lbl4)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.alert_threshold.to_string())
-            .position((345, 88))
-            .size((50, 22))
+            .position((470, 88))
+            .size((70, 24))
             .parent(&window)
             .build(&mut alert_threshold_input)
             .ok();
@@ -299,21 +298,21 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::CheckIntervalLabel))
             .position((20, 125))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl5)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.cycle_time_secs.to_string())
-            .position((150, 123))
-            .size((60, 22))
+            .position((210, 123))
+            .size((80, 24))
             .parent(&window)
             .build(&mut interval_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::CheckIntervalHint))
-            .position((220, 125))
-            .size((170, 22))
+            .position((300, 125))
+            .size((220, 24))
             .parent(&window)
             .build(&mut lbl6)
             .ok();
@@ -321,7 +320,7 @@ impl TrayManager {
         nwg::CheckBox::builder()
             .text(i18n::text(language, Key::KeepCameraOnLabel))
             .position((20, 185))
-            .size((260, 22))
+            .size((520, 24))
             .parent(&window)
             .check_state(if cfg.keep_camera_on {
                 nwg::CheckBoxState::Checked
@@ -334,21 +333,21 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::CameraIndexLabel))
             .position((20, 155))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl13)
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.camera_index.map(|v| v.to_string()).unwrap_or_default())
-            .position((150, 153))
-            .size((60, 22))
+            .position((210, 153))
+            .size((80, 24))
             .parent(&window)
             .build(&mut camera_index_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::CameraIndexHint))
-            .position((220, 155))
-            .size((120, 22))
+            .position((300, 155))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl14)
             .ok();
@@ -357,7 +356,7 @@ impl TrayManager {
         nwg::CheckBox::builder()
             .text(i18n::text(language, Key::StandReminderLabel))
             .position((20, 220))
-            .size((130, 22))
+            .size((180, 24))
             .parent(&window)
             .check_state(if cfg.desk_raise_enabled {
                 nwg::CheckBoxState::Checked
@@ -368,15 +367,15 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.desk_raise_interval_mins.to_string())
-            .position((160, 220))
-            .size((50, 22))
+            .position((210, 220))
+            .size((80, 24))
             .parent(&window)
             .build(&mut desk_raise_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::StandReminderHint))
             .position((220, 222))
-            .size((170, 22))
+            .size((220, 24))
             .parent(&window)
             .build(&mut lbl7)
             .ok();
@@ -385,7 +384,7 @@ impl TrayManager {
         nwg::CheckBox::builder()
             .text(i18n::text(language, Key::BreakReminderLabel))
             .position((20, 255))
-            .size((130, 22))
+            .size((180, 24))
             .parent(&window)
             .check_state(if cfg.break_reminder_enabled {
                 nwg::CheckBoxState::Checked
@@ -396,45 +395,45 @@ impl TrayManager {
             .ok();
         nwg::TextInput::builder()
             .text(&cfg.max_session_screen_time_mins.to_string())
-            .position((160, 255))
-            .size((50, 22))
+            .position((210, 255))
+            .size((80, 24))
             .parent(&window)
             .build(&mut break_after_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::SessionMaxHint))
-            .position((220, 257))
-            .size((180, 22))
+            .position((300, 257))
+            .size((230, 24))
             .parent(&window)
             .build(&mut lbl10)
             .ok();
 
         nwg::TextInput::builder()
             .text(&cfg.max_daily_screen_time_mins.to_string())
-            .position((160, 287))
-            .size((50, 22))
+            .position((210, 287))
+            .size((80, 24))
             .parent(&window)
             .build(&mut day_limit_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::DayMaxHint))
-            .position((220, 289))
-            .size((170, 22))
+            .position((300, 289))
+            .size((230, 24))
             .parent(&window)
             .build(&mut lbl11)
             .ok();
 
         nwg::TextInput::builder()
             .text(&cfg.break_reminder_repeat_secs.to_string())
-            .position((160, 319))
-            .size((50, 22))
+            .position((210, 319))
+            .size((80, 24))
             .parent(&window)
             .build(&mut break_repeat_input)
             .ok();
         nwg::Label::builder()
             .text(i18n::text(language, Key::NotifyEveryHint))
-            .position((220, 321))
-            .size((190, 22))
+            .position((300, 321))
+            .size((240, 24))
             .parent(&window)
             .build(&mut lbl12)
             .ok();
@@ -443,7 +442,7 @@ impl TrayManager {
         nwg::Label::builder()
             .text(i18n::text(language, Key::LanguageLabel))
             .position((20, 354))
-            .size((120, 22))
+            .size((180, 24))
             .parent(&window)
             .build(&mut lbl15)
             .ok();
@@ -452,31 +451,24 @@ impl TrayManager {
         nwg::ComboBox::builder()
             .collection(language_options)
             .selected_index(Some(language_selected_index))
-            .position((150, 352))
-            .size((60, 22))
+            .position((210, 352))
+            .size((80, 24))
             .parent(&window)
             .build(&mut language_input)
-            .ok();
-        nwg::Label::builder()
-            .text(i18n::text(language, Key::LanguageHint))
-            .position((220, 354))
-            .size((180, 22))
-            .parent(&window)
-            .build(&mut lbl9)
             .ok();
 
         // Advanced prompt
         nwg::Label::builder()
             .text(i18n::text(language, Key::AdvancedPromptLabel))
-            .position((20, 384))
-            .size((380, 22))
+            .position((20, 390))
+            .size((520, 24))
             .parent(&window)
             .build(&mut lbl16)
             .ok();
         nwg::TextBox::builder()
             .text(&cfg.llm_prompt)
-            .position((20, 409))
-            .size((380, 160))
+            .position((20, 418))
+            .size((520, 240))
             .parent(&window)
             .focus(true)
             .build(&mut llm_prompt_input)
@@ -485,15 +477,15 @@ impl TrayManager {
         // Buttons
         nwg::Button::builder()
             .text(i18n::text(language, Key::Save))
-            .position((200, 580))
-            .size((90, 32))
+            .position((340, 678))
+            .size((96, 36))
             .parent(&window)
             .build(&mut save_button)
             .ok();
         nwg::Button::builder()
             .text(i18n::text(language, Key::Cancel))
-            .position((310, 580))
-            .size((90, 32))
+            .position((444, 678))
+            .size((96, 36))
             .parent(&window)
             .build(&mut cancel_button)
             .ok();
@@ -501,64 +493,52 @@ impl TrayManager {
         nwg::Tooltip::builder()
             .register(
                 &api_key_input,
-                "API key used to authenticate requests to your LLM provider.",
+                i18n::text(language, Key::TooltipApiCredentials),
             )
-            .register(
-                &model_input,
-                "Vision model name used for posture analysis (for example gpt-5.4-mini).",
-            )
+            .register(&model_input, i18n::text(language, Key::TooltipModel))
             .register(
                 &posture_threshold_input,
-                "Minimum posture score (1-10) considered good posture.",
+                i18n::text(language, Key::TooltipPostureThreshold),
             )
             .register(
                 &alert_threshold_input,
-                "Number of consecutive low-score checks before an alert is shown.",
+                i18n::text(language, Key::TooltipAlertThreshold),
             )
-            .register(
-                &interval_input,
-                "Seconds between posture checks. Lower values check more often.",
-            )
+            .register(&interval_input, i18n::text(language, Key::TooltipInterval))
             .register(
                 &camera_index_input,
-                "Camera device index. Leave blank to auto-select the default camera.",
+                i18n::text(language, Key::TooltipCameraIndex),
             )
             .register(
                 &keep_camera_on_check,
-                "Keep camera stream open between checks for faster capture, with higher resource use.",
+                i18n::text(language, Key::TooltipKeepCameraOn),
             )
             .register(
                 &desk_raise_check,
-                "Enable periodic stand-up reminders.",
+                i18n::text(language, Key::TooltipStandReminderEnabled),
             )
             .register(
                 &desk_raise_input,
-                "Minutes between stand-up reminders when enabled.",
+                i18n::text(language, Key::TooltipStandReminderInterval),
             )
             .register(
                 &break_reminder_check,
-                "Enable break reminders based on continuous and daily screen time.",
+                i18n::text(language, Key::TooltipBreakReminderEnabled),
             )
             .register(
                 &break_after_input,
-                "Maximum continuous session length in minutes before break reminders start.",
+                i18n::text(language, Key::TooltipSessionLimit),
             )
             .register(
                 &day_limit_input,
-                "Maximum total daily screen time in minutes before break reminders start.",
+                i18n::text(language, Key::TooltipDailyLimit),
             )
             .register(
                 &break_repeat_input,
-                "Seconds between repeated break reminders while you remain over the limit.",
+                i18n::text(language, Key::TooltipBreakRepeat),
             )
-            .register(
-                &language_input,
-                "UI language",
-            )
-            .register(
-                &llm_prompt_input,
-                "Advanced prompt sent with each image. Only edit if you understand prompt tuning.",
-            )
+            .register(&language_input, i18n::text(language, Key::TooltipLanguage))
+            .register(&llm_prompt_input, i18n::text(language, Key::TooltipPrompt))
             .build(&mut config_tooltips)
             .ok();
 

@@ -153,7 +153,13 @@ mod tests {
     use super::Config;
     use std::fs;
     use std::path::PathBuf;
+    use std::sync::{Mutex, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn appdata_env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     fn unique_temp_dir(name: &str) -> PathBuf {
         let nanos = SystemTime::now()
@@ -224,6 +230,9 @@ mod tests {
 
     #[test]
     fn config_path_prefers_existing_appdata_location() {
+        let _guard = appdata_env_lock()
+            .lock()
+            .expect("appdata env lock should not be poisoned");
         let appdata_root = unique_temp_dir("appdata-pref");
         let user_config = appdata_root
             .join("com.posturewatch")
@@ -244,6 +253,9 @@ mod tests {
 
     #[test]
     fn load_returns_default_when_toml_invalid() {
+        let _guard = appdata_env_lock()
+            .lock()
+            .expect("appdata env lock should not be poisoned");
         let appdata_root = unique_temp_dir("appdata-invalid");
         let user_config = appdata_root
             .join("com.posturewatch")
@@ -268,6 +280,9 @@ mod tests {
 
     #[test]
     fn load_reads_existing_valid_config() {
+        let _guard = appdata_env_lock()
+            .lock()
+            .expect("appdata env lock should not be poisoned");
         let appdata_root = unique_temp_dir("appdata-valid");
         let user_config = appdata_root
             .join("com.posturewatch")
