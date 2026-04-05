@@ -193,7 +193,7 @@ impl TrayManager {
         let mut break_after_input = nwg::TextInput::default();
         let mut day_limit_input = nwg::TextInput::default();
         let mut break_repeat_input = nwg::TextInput::default();
-        let mut language_input = nwg::TextInput::default();
+        let mut language_input = nwg::ComboBox::<String>::default();
         let mut llm_prompt_input = nwg::TextBox::default();
         let mut save_button = nwg::Button::default();
         let mut cancel_button = nwg::Button::default();
@@ -227,7 +227,7 @@ impl TrayManager {
 
         // API Key
         nwg::Label::builder()
-            .text("API Key:")
+            .text(i18n::text(language, Key::ApiKeyLabel))
             .position((20, 20))
             .size((120, 22))
             .parent(&window)
@@ -243,7 +243,7 @@ impl TrayManager {
 
         // Model
         nwg::Label::builder()
-            .text("Model:")
+            .text(i18n::text(language, Key::ModelLabel))
             .position((20, 55))
             .size((120, 22))
             .parent(&window)
@@ -259,7 +259,7 @@ impl TrayManager {
 
         // Posture threshold (1-10) + Alert threshold
         nwg::Label::builder()
-            .text("Posture threshold:")
+            .text(i18n::text(language, Key::PostureThresholdLabel))
             .position((20, 90))
             .size((120, 22))
             .parent(&window)
@@ -273,7 +273,7 @@ impl TrayManager {
             .build(&mut posture_threshold_input)
             .ok();
         nwg::Label::builder()
-            .text("(1-10)")
+            .text(i18n::text(language, Key::PostureRangeHint))
             .position((205, 90))
             .size((45, 22))
             .parent(&window)
@@ -281,7 +281,7 @@ impl TrayManager {
             .ok();
 
         nwg::Label::builder()
-            .text("Alerts after:")
+            .text(i18n::text(language, Key::AlertsAfterLabel))
             .position((260, 90))
             .size((80, 22))
             .parent(&window)
@@ -297,7 +297,7 @@ impl TrayManager {
 
         // Check interval
         nwg::Label::builder()
-            .text("Check interval:")
+            .text(i18n::text(language, Key::CheckIntervalLabel))
             .position((20, 125))
             .size((120, 22))
             .parent(&window)
@@ -311,7 +311,7 @@ impl TrayManager {
             .build(&mut interval_input)
             .ok();
         nwg::Label::builder()
-            .text("seconds (5-300)")
+            .text(i18n::text(language, Key::CheckIntervalHint))
             .position((220, 125))
             .size((170, 22))
             .parent(&window)
@@ -319,7 +319,7 @@ impl TrayManager {
             .ok();
 
         nwg::CheckBox::builder()
-            .text("Keep camera on between checks")
+            .text(i18n::text(language, Key::KeepCameraOnLabel))
             .position((20, 185))
             .size((260, 22))
             .parent(&window)
@@ -332,7 +332,7 @@ impl TrayManager {
             .ok();
 
         nwg::Label::builder()
-            .text("Camera index:")
+            .text(i18n::text(language, Key::CameraIndexLabel))
             .position((20, 155))
             .size((120, 22))
             .parent(&window)
@@ -346,7 +346,7 @@ impl TrayManager {
             .build(&mut camera_index_input)
             .ok();
         nwg::Label::builder()
-            .text("blank = auto")
+            .text(i18n::text(language, Key::CameraIndexHint))
             .position((220, 155))
             .size((120, 22))
             .parent(&window)
@@ -355,7 +355,7 @@ impl TrayManager {
 
         // Stand reminder
         nwg::CheckBox::builder()
-            .text("Stand reminder")
+            .text(i18n::text(language, Key::StandReminderLabel))
             .position((20, 220))
             .size((130, 22))
             .parent(&window)
@@ -374,7 +374,7 @@ impl TrayManager {
             .build(&mut desk_raise_input)
             .ok();
         nwg::Label::builder()
-            .text("minutes (1-480)")
+            .text(i18n::text(language, Key::StandReminderHint))
             .position((220, 222))
             .size((170, 22))
             .parent(&window)
@@ -383,7 +383,7 @@ impl TrayManager {
 
         // Break reminder
         nwg::CheckBox::builder()
-            .text("Break reminder")
+            .text(i18n::text(language, Key::BreakReminderLabel))
             .position((20, 255))
             .size((130, 22))
             .parent(&window)
@@ -402,7 +402,7 @@ impl TrayManager {
             .build(&mut break_after_input)
             .ok();
         nwg::Label::builder()
-            .text("session max mins (1-480)")
+            .text(i18n::text(language, Key::SessionMaxHint))
             .position((220, 257))
             .size((180, 22))
             .parent(&window)
@@ -417,7 +417,7 @@ impl TrayManager {
             .build(&mut day_limit_input)
             .ok();
         nwg::Label::builder()
-            .text("day max mins (30-1440)")
+            .text(i18n::text(language, Key::DayMaxHint))
             .position((220, 289))
             .size((170, 22))
             .parent(&window)
@@ -432,7 +432,7 @@ impl TrayManager {
             .build(&mut break_repeat_input)
             .ok();
         nwg::Label::builder()
-            .text("notify every secs (5-600)")
+            .text(i18n::text(language, Key::NotifyEveryHint))
             .position((220, 321))
             .size((190, 22))
             .parent(&window)
@@ -447,8 +447,11 @@ impl TrayManager {
             .parent(&window)
             .build(&mut lbl15)
             .ok();
-        nwg::TextInput::builder()
-            .text(&cfg.language)
+        let language_options = vec!["en".to_string(), "ru".to_string()];
+        let language_selected_index = if language == Language::Ru { 1 } else { 0 };
+        nwg::ComboBox::builder()
+            .collection(language_options)
+            .selected_index(Some(language_selected_index))
             .position((150, 352))
             .size((60, 22))
             .parent(&window)
@@ -464,7 +467,7 @@ impl TrayManager {
 
         // Advanced prompt
         nwg::Label::builder()
-            .text("Advanced: LLM prompt")
+            .text(i18n::text(language, Key::AdvancedPromptLabel))
             .position((20, 384))
             .size((380, 22))
             .parent(&window)
@@ -550,7 +553,7 @@ impl TrayManager {
             )
             .register(
                 &language_input,
-                "UI language code. Use 'en' for English or 'ru' for Russian.",
+                "UI language",
             )
             .register(
                 &llm_prompt_input,
@@ -604,8 +607,8 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Posture threshold must be 1-10",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationPostureThreshold),
                         );
                         return;
                     }
@@ -615,8 +618,8 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Alert threshold must be 1-10",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationAlertThreshold),
                         );
                         return;
                     }
@@ -624,7 +627,11 @@ impl TrayManager {
                 let interval: u64 = match ii.borrow().text().parse() {
                     Ok(v) if (5..=300).contains(&v) => v,
                     _ => {
-                        nwg::modal_info_message(&window_handle, "Error", "Interval must be 5-300");
+                        nwg::modal_info_message(
+                            &window_handle,
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationInterval),
+                        );
                         return;
                     }
                 };
@@ -638,8 +645,8 @@ impl TrayManager {
                             Err(_) => {
                                 nwg::modal_info_message(
                                     &window_handle,
-                                    "Error",
-                                    "Camera index must be blank or a non-negative integer",
+                                    i18n::text(language, Key::DialogErrorTitle),
+                                    i18n::text(language, Key::ValidationCameraIndex),
                                 );
                                 return;
                             }
@@ -651,8 +658,8 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Stand reminder must be 1-480 minutes",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationStandReminder),
                         );
                         return;
                     }
@@ -662,8 +669,8 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Break reminder after must be 1-480 minutes",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationBreakAfter),
                         );
                         return;
                     }
@@ -673,8 +680,8 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Daily screen time max must be 30-1440 minutes",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationDailyMax),
                         );
                         return;
                     }
@@ -684,28 +691,41 @@ impl TrayManager {
                     _ => {
                         nwg::modal_info_message(
                             &window_handle,
-                            "Error",
-                            "Break repeat interval must be 5-600 seconds",
+                            i18n::text(language, Key::DialogErrorTitle),
+                            i18n::text(language, Key::ValidationBreakRepeat),
                         );
                         return;
                     }
                 };
                 let model = mi.borrow().text();
                 if model.trim().is_empty() {
-                    nwg::modal_info_message(&window_handle, "Error", "Model cannot be empty");
+                    nwg::modal_info_message(
+                        &window_handle,
+                        i18n::text(language, Key::DialogErrorTitle),
+                        i18n::text(language, Key::ValidationModelEmpty),
+                    );
                     return;
                 }
                 let llm_prompt = lpi.borrow().text();
                 if llm_prompt.trim().is_empty() {
-                    nwg::modal_info_message(&window_handle, "Error", "LLM prompt cannot be empty");
-                    return;
-                }
-                let language = li.borrow().text().trim().to_lowercase();
-                if language != "en" && language != "ru" {
                     nwg::modal_info_message(
                         &window_handle,
-                        "Error",
-                        i18n::text(Language::from_config(), Key::LanguageValidationError),
+                        i18n::text(language, Key::DialogErrorTitle),
+                        i18n::text(language, Key::ValidationPromptEmpty),
+                    );
+                    return;
+                }
+                let selected_index = li.borrow().selection();
+                let language_code = match selected_index {
+                    Some(1) => "ru".to_string(),
+                    _ => "en".to_string(),
+                };
+                if language_code != "en" && language_code != "ru" {
+                    let selected_language = Language::from_code(&language_code);
+                    nwg::modal_info_message(
+                        &window_handle,
+                        i18n::text(selected_language, Key::DialogErrorTitle),
+                        i18n::text(selected_language, Key::LanguageValidationError),
                     );
                     return;
                 }
@@ -727,10 +747,15 @@ impl TrayManager {
                 new_cfg.max_session_screen_time_mins = break_after_mins;
                 new_cfg.max_daily_screen_time_mins = day_limit_mins;
                 new_cfg.break_reminder_repeat_secs = break_repeat_secs;
-                new_cfg.language = language;
+                new_cfg.language = language_code;
 
                 if new_cfg.save().is_ok() {
-                    nwg::modal_info_message(&window_handle, "Saved", "Settings saved.");
+                    let saved_language = Language::from_code(&new_cfg.language);
+                    nwg::modal_info_message(
+                        &window_handle,
+                        i18n::text(saved_language, Key::DialogSavedTitle),
+                        i18n::text(saved_language, Key::DialogSettingsSaved),
+                    );
                 }
                 nwg::stop_thread_dispatch();
             } else if (evt == nwg::Event::OnButtonClick && handle == cancel_handle)
