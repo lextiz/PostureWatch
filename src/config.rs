@@ -429,6 +429,14 @@ break_reset_after_mins = 7
         assert_eq!(loaded.max_daily_screen_time_mins, 420);
         assert_eq!(loaded.break_reminder_repeat_secs, 15);
         assert_eq!(loaded.break_reset_after_mins, 7);
+        assert!(!loaded.frame_notification_enabled);
+        assert_eq!(loaded.frame_notification_duration_ms, 1_000);
+        assert_eq!(loaded.frame_notification_area_percent, 2.0);
+        assert_eq!(loaded.frame_notification_bad_posture_color, "#FF0000");
+        assert_eq!(loaded.frame_notification_desk_raise_color, "#FFA500");
+        assert_eq!(loaded.frame_notification_session_limit_color, "#FFCC00");
+        assert_eq!(loaded.frame_notification_daily_limit_color, "#A020F0");
+        assert_eq!(loaded.frame_notification_api_setup_color, "#FF8000");
     }
 
     #[test]
@@ -455,5 +463,13 @@ desk_raise_interval_mins = 60
         assert_eq!(parsed.max_daily_screen_time_mins, 480);
         assert_eq!(parsed.break_reminder_repeat_secs, 30);
         assert_eq!(parsed.break_reset_after_mins, 5);
+        assert!(!parsed.frame_notification_enabled);
+        assert_eq!(parsed.frame_notification_duration_ms, 1_000);
+        assert_eq!(parsed.frame_notification_area_percent, 2.0);
+        assert_eq!(parsed.frame_notification_bad_posture_color, "#FF0000");
+        assert_eq!(parsed.frame_notification_desk_raise_color, "#FFA500");
+        assert_eq!(parsed.frame_notification_session_limit_color, "#FFCC00");
+        assert_eq!(parsed.frame_notification_daily_limit_color, "#A020F0");
+        assert_eq!(parsed.frame_notification_api_setup_color, "#FF8000");
     }
 }

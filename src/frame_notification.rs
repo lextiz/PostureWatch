@@ -254,6 +254,10 @@ fn border_thickness(screen_w: i32, screen_h: i32, area_ratio: f32) -> i32 {
 mod tests {
     #[cfg(windows)]
     use super::parse_hex_color;
+    #[cfg(not(windows))]
+    use super::{show_frame_notification, FrameNotificationKind};
+    #[cfg(not(windows))]
+    use crate::config::Config;
 
     #[cfg(windows)]
     #[test]
@@ -269,5 +273,19 @@ mod tests {
         assert_eq!(parse_hex_color("#GG0000"), None);
         assert_eq!(parse_hex_color("12345"), None);
         assert_eq!(parse_hex_color(""), None);
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn non_windows_frame_notifications_are_noop() {
+        let config = Config {
+            frame_notification_enabled: true,
+            ..Config::default()
+        };
+        show_frame_notification(FrameNotificationKind::BadPosture, &config);
+        show_frame_notification(FrameNotificationKind::DeskRaise, &config);
+        show_frame_notification(FrameNotificationKind::SessionLimit, &config);
+        show_frame_notification(FrameNotificationKind::DailyLimit, &config);
+        show_frame_notification(FrameNotificationKind::ApiSetup, &config);
     }
 }
