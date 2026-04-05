@@ -84,6 +84,21 @@ pub enum Key {
     ApiSetupBody,
     ApiSetupSummary,
     ApiSetupDetails,
+    TooltipApiCredentials,
+    TooltipModel,
+    TooltipPostureThreshold,
+    TooltipAlertThreshold,
+    TooltipInterval,
+    TooltipCameraIndex,
+    TooltipKeepCameraOn,
+    TooltipStandReminderEnabled,
+    TooltipStandReminderInterval,
+    TooltipBreakReminderEnabled,
+    TooltipSessionLimit,
+    TooltipDailyLimit,
+    TooltipBreakRepeat,
+    TooltipLanguage,
+    TooltipPrompt,
 }
 
 pub fn text(language: Language, key: Key) -> &'static str {
@@ -110,8 +125,8 @@ pub fn text(language: Language, key: Key) -> &'static str {
         (Language::Ru, Key::SettingsTitle) => "Настройки PostureWatch",
         (Language::En, Key::LanguageLabel) => "Language:",
         (Language::Ru, Key::LanguageLabel) => "Язык интерфейса:",
-        (Language::En, Key::LanguageHint) => "supported: en, ru",
-        (Language::Ru, Key::LanguageHint) => "доступно: en, ru",
+        (Language::En, Key::LanguageHint) => "en, ru",
+        (Language::Ru, Key::LanguageHint) => "en, ru",
         (Language::En, Key::Save) => "Save",
         (Language::Ru, Key::Save) => "Сохранить",
         (Language::En, Key::Cancel) => "Cancel",
@@ -225,6 +240,62 @@ pub fn text(language: Language, key: Key) -> &'static str {
         (Language::Ru, Key::ApiSetupSummary) => "Требуется настройка Posture Watch",
         (Language::En, Key::ApiSetupDetails) => "Details",
         (Language::Ru, Key::ApiSetupDetails) => "Детали",
+        (Language::En, Key::TooltipApiCredentials) => "API key for your LLM provider.",
+        (Language::Ru, Key::TooltipApiCredentials) => "API-ключ для вашего провайдера LLM.",
+        (Language::En, Key::TooltipModel) => "Vision model name for posture analysis.",
+        (Language::Ru, Key::TooltipModel) => "Имя модели зрения для анализа осанки.",
+        (Language::En, Key::TooltipPostureThreshold) => {
+            "Minimum posture score (1-10) treated as good."
+        }
+        (Language::Ru, Key::TooltipPostureThreshold) => {
+            "Минимальная оценка осанки (1-10), считающаяся хорошей."
+        }
+        (Language::En, Key::TooltipAlertThreshold) => {
+            "How many low scores in a row trigger an alert."
+        }
+        (Language::Ru, Key::TooltipAlertThreshold) => {
+            "Сколько низких оценок подряд нужно для сигнала."
+        }
+        (Language::En, Key::TooltipInterval) => "Seconds between posture checks.",
+        (Language::Ru, Key::TooltipInterval) => "Секунды между проверками осанки.",
+        (Language::En, Key::TooltipCameraIndex) => {
+            "Camera index. Empty value = automatic selection."
+        }
+        (Language::Ru, Key::TooltipCameraIndex) => "Индекс камеры. Пусто = авто-выбор.",
+        (Language::En, Key::TooltipKeepCameraOn) => {
+            "Keep camera open between checks for faster capture."
+        }
+        (Language::Ru, Key::TooltipKeepCameraOn) => {
+            "Держать камеру открытой между проверками для более быстрого захвата."
+        }
+        (Language::En, Key::TooltipStandReminderEnabled) => "Enable stand-up reminders.",
+        (Language::Ru, Key::TooltipStandReminderEnabled) => "Включить напоминания встать.",
+        (Language::En, Key::TooltipStandReminderInterval) => "Minutes between stand-up reminders.",
+        (Language::Ru, Key::TooltipStandReminderInterval) => "Минуты между напоминаниями встать.",
+        (Language::En, Key::TooltipBreakReminderEnabled) => "Enable break reminders.",
+        (Language::Ru, Key::TooltipBreakReminderEnabled) => "Включить напоминания о перерыве.",
+        (Language::En, Key::TooltipSessionLimit) => {
+            "Session limit (minutes) before break reminders start."
+        }
+        (Language::Ru, Key::TooltipSessionLimit) => {
+            "Лимит сессии (мин) до начала напоминаний о перерыве."
+        }
+        (Language::En, Key::TooltipDailyLimit) => {
+            "Daily limit (minutes) before break reminders start."
+        }
+        (Language::Ru, Key::TooltipDailyLimit) => {
+            "Дневной лимит (мин) до начала напоминаний о перерыве."
+        }
+        (Language::En, Key::TooltipBreakRepeat) => "Seconds between repeated break reminders.",
+        (Language::Ru, Key::TooltipBreakRepeat) => {
+            "Секунды между повторными напоминаниями о перерыве."
+        }
+        (Language::En, Key::TooltipLanguage) => "Interface language.",
+        (Language::Ru, Key::TooltipLanguage) => "Язык интерфейса.",
+        (Language::En, Key::TooltipPrompt) => "Advanced prompt sent with each image.",
+        (Language::Ru, Key::TooltipPrompt) => {
+            "Дополнительный промпт, отправляемый с каждым изображением."
+        }
     }
 }
 
@@ -294,6 +365,21 @@ mod tests {
         Key::ApiSetupBody,
         Key::ApiSetupSummary,
         Key::ApiSetupDetails,
+        Key::TooltipApiCredentials,
+        Key::TooltipModel,
+        Key::TooltipPostureThreshold,
+        Key::TooltipAlertThreshold,
+        Key::TooltipInterval,
+        Key::TooltipCameraIndex,
+        Key::TooltipKeepCameraOn,
+        Key::TooltipStandReminderEnabled,
+        Key::TooltipStandReminderInterval,
+        Key::TooltipBreakReminderEnabled,
+        Key::TooltipSessionLimit,
+        Key::TooltipDailyLimit,
+        Key::TooltipBreakRepeat,
+        Key::TooltipLanguage,
+        Key::TooltipPrompt,
     ];
 
     #[test]
