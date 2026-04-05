@@ -68,17 +68,13 @@ unsafe fn show_frame_notification_blocking(color_bgr: u32, duration_ms: u64, are
     use std::ffi::c_void;
     use std::sync::OnceLock;
     use std::time::{Duration, Instant};
-    use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
-    use windows_sys::Win32::Graphics::Gdi::{
-        BeginPaint, CreateSolidBrush, DeleteObject, EndPaint, FillRect, PAINTSTRUCT,
-    };
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetSystemMetrics,
-        PeekMessageW, RegisterClassW, SetWindowLongPtrW, ShowWindow, TranslateMessage,
-        UpdateWindow, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, MSG, PM_REMOVE, SM_CXSCREEN,
-        SM_CYSCREEN, SW_SHOWNOACTIVATE, WM_NCCREATE, WM_NCDESTROY, WM_PAINT, WNDCLASSW,
-        WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+        CreateWindowExW, DestroyWindow, DispatchMessageW, GetSystemMetrics, PeekMessageW,
+        RegisterClassW, ShowWindow, TranslateMessage, CS_HREDRAW, CS_VREDRAW, MSG, PM_REMOVE,
+        SM_CXSCREEN, SM_CYSCREEN, SW_SHOWNOACTIVATE, WNDCLASSW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST, WS_POPUP,
     };
 
     unsafe extern "system" fn frame_proc(
@@ -118,7 +114,7 @@ unsafe fn show_frame_notification_blocking(color_bgr: u32, duration_ms: u64, are
                     unsafe { *color_ptr }
                 };
                 let brush = unsafe { CreateSolidBrush(color) };
-                let mut rect: RECT = RECT::default();
+                let mut rect: RECT = unsafe { std::mem::zeroed() };
                 unsafe { GetClientRect(hwnd, &mut rect) };
                 unsafe { FillRect(hdc, &rect, brush) };
                 unsafe { DeleteObject(brush as *mut c_void) };
@@ -156,13 +152,11 @@ unsafe fn show_frame_notification_blocking(color_bgr: u32, duration_ms: u64, are
 
     let class_name_w = to_wide(CLASS_NAME);
     let _ = CLASS_REGISTERED.get_or_init(|| {
-        let class = WNDCLASSW {
-            style: CS_HREDRAW | CS_VREDRAW,
-            lpfnWndProc: Some(frame_proc),
-            hInstance: hinstance,
-            lpszClassName: class_name_w.as_ptr(),
-            ..Default::default()
-        };
+        let mut class: WNDCLASSW = unsafe { std::mem::zeroed() };
+        class.style = CS_HREDRAW | CS_VREDRAW;
+        class.lpfnWndProc = Some(frame_proc);
+        class.hInstance = hinstance;
+        class.lpszClassName = class_name_w.as_ptr();
         RegisterClassW(&class) != 0
     });
 
@@ -215,7 +209,6 @@ unsafe fn show_frame_notification_blocking(color_bgr: u32, duration_ms: u64, are
         }
 
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        UpdateWindow(hwnd);
         windows.push(hwnd);
     }
 
