@@ -32,6 +32,22 @@ pub struct Config {
     pub break_reset_after_mins: u64,
     #[serde(default = "default_language")]
     pub language: String,
+    #[serde(default = "default_frame_notification_enabled")]
+    pub frame_notification_enabled: bool,
+    #[serde(default = "default_frame_notification_duration_ms")]
+    pub frame_notification_duration_ms: u64,
+    #[serde(default = "default_frame_notification_area_percent")]
+    pub frame_notification_area_percent: f32,
+    #[serde(default = "default_frame_bad_posture_color")]
+    pub frame_notification_bad_posture_color: String,
+    #[serde(default = "default_frame_desk_raise_color")]
+    pub frame_notification_desk_raise_color: String,
+    #[serde(default = "default_frame_session_limit_color")]
+    pub frame_notification_session_limit_color: String,
+    #[serde(default = "default_frame_daily_limit_color")]
+    pub frame_notification_daily_limit_color: String,
+    #[serde(default = "default_frame_api_setup_color")]
+    pub frame_notification_api_setup_color: String,
 }
 
 fn default_llm_prompt() -> String {
@@ -66,6 +82,38 @@ fn default_language() -> String {
     "en".to_string()
 }
 
+fn default_frame_notification_enabled() -> bool {
+    false
+}
+
+fn default_frame_notification_duration_ms() -> u64 {
+    1_000
+}
+
+fn default_frame_notification_area_percent() -> f32 {
+    2.0
+}
+
+fn default_frame_bad_posture_color() -> String {
+    "#FF0000".to_string()
+}
+
+fn default_frame_desk_raise_color() -> String {
+    "#FFA500".to_string()
+}
+
+fn default_frame_session_limit_color() -> String {
+    "#FFCC00".to_string()
+}
+
+fn default_frame_daily_limit_color() -> String {
+    "#A020F0".to_string()
+}
+
+fn default_frame_api_setup_color() -> String {
+    "#FF8000".to_string()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -86,6 +134,14 @@ impl Default for Config {
             break_reminder_repeat_secs: default_break_reminder_repeat_secs(),
             break_reset_after_mins: default_break_reset_after_mins(),
             language: default_language(),
+            frame_notification_enabled: default_frame_notification_enabled(),
+            frame_notification_duration_ms: default_frame_notification_duration_ms(),
+            frame_notification_area_percent: default_frame_notification_area_percent(),
+            frame_notification_bad_posture_color: default_frame_bad_posture_color(),
+            frame_notification_desk_raise_color: default_frame_desk_raise_color(),
+            frame_notification_session_limit_color: default_frame_session_limit_color(),
+            frame_notification_daily_limit_color: default_frame_daily_limit_color(),
+            frame_notification_api_setup_color: default_frame_api_setup_color(),
         }
     }
 }
@@ -182,6 +238,9 @@ mod tests {
         assert_eq!(config.max_daily_screen_time_mins, 480);
         assert_eq!(config.break_reminder_repeat_secs, 30);
         assert_eq!(config.break_reset_after_mins, 5);
+        assert!(!config.frame_notification_enabled);
+        assert_eq!(config.frame_notification_duration_ms, 1_000);
+        assert_eq!(config.frame_notification_area_percent, 2.0);
     }
 
     #[test]
@@ -226,6 +285,38 @@ mod tests {
             default_config.break_reset_after_mins
         );
         assert_eq!(parsed.language, default_config.language);
+        assert_eq!(
+            parsed.frame_notification_enabled,
+            default_config.frame_notification_enabled
+        );
+        assert_eq!(
+            parsed.frame_notification_duration_ms,
+            default_config.frame_notification_duration_ms
+        );
+        assert_eq!(
+            parsed.frame_notification_area_percent,
+            default_config.frame_notification_area_percent
+        );
+        assert_eq!(
+            parsed.frame_notification_bad_posture_color,
+            default_config.frame_notification_bad_posture_color
+        );
+        assert_eq!(
+            parsed.frame_notification_desk_raise_color,
+            default_config.frame_notification_desk_raise_color
+        );
+        assert_eq!(
+            parsed.frame_notification_session_limit_color,
+            default_config.frame_notification_session_limit_color
+        );
+        assert_eq!(
+            parsed.frame_notification_daily_limit_color,
+            default_config.frame_notification_daily_limit_color
+        );
+        assert_eq!(
+            parsed.frame_notification_api_setup_color,
+            default_config.frame_notification_api_setup_color
+        );
     }
 
     #[test]
@@ -338,6 +429,14 @@ break_reset_after_mins = 7
         assert_eq!(loaded.max_daily_screen_time_mins, 420);
         assert_eq!(loaded.break_reminder_repeat_secs, 15);
         assert_eq!(loaded.break_reset_after_mins, 7);
+        assert!(!loaded.frame_notification_enabled);
+        assert_eq!(loaded.frame_notification_duration_ms, 1_000);
+        assert_eq!(loaded.frame_notification_area_percent, 2.0);
+        assert_eq!(loaded.frame_notification_bad_posture_color, "#FF0000");
+        assert_eq!(loaded.frame_notification_desk_raise_color, "#FFA500");
+        assert_eq!(loaded.frame_notification_session_limit_color, "#FFCC00");
+        assert_eq!(loaded.frame_notification_daily_limit_color, "#A020F0");
+        assert_eq!(loaded.frame_notification_api_setup_color, "#FF8000");
     }
 
     #[test]
@@ -364,5 +463,13 @@ desk_raise_interval_mins = 60
         assert_eq!(parsed.max_daily_screen_time_mins, 480);
         assert_eq!(parsed.break_reminder_repeat_secs, 30);
         assert_eq!(parsed.break_reset_after_mins, 5);
+        assert!(!parsed.frame_notification_enabled);
+        assert_eq!(parsed.frame_notification_duration_ms, 1_000);
+        assert_eq!(parsed.frame_notification_area_percent, 2.0);
+        assert_eq!(parsed.frame_notification_bad_posture_color, "#FF0000");
+        assert_eq!(parsed.frame_notification_desk_raise_color, "#FFA500");
+        assert_eq!(parsed.frame_notification_session_limit_color, "#FFCC00");
+        assert_eq!(parsed.frame_notification_daily_limit_color, "#A020F0");
+        assert_eq!(parsed.frame_notification_api_setup_color, "#FF8000");
     }
 }
