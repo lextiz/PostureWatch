@@ -44,13 +44,10 @@ If this is useful to you, a GitHub star helps more people find it.
 
 ## Roadmap
 
-- Option to turn the camera on/off only for taking pictures (blinking light trade-off)
-- Break reminder, with detection of presence
 - Detection of absence and exponential backoff (eventually auto-pause) to save tokens
 - Option to configure maximum number of repititions of the presistent reminder
-- Icon should reflect monitoring status, tooltip: time at PC (today, current session), current posture score
+- Icon should reflect monitoring status
 - Specific hint in notification, e.g.: relax your shoulders, keep your head back
 - Screen frame warning (instead of notifications)
-- Prompts customization
 - OS portability: MacOS, Linux
 - Local model
