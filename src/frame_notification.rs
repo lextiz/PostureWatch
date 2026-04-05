@@ -89,8 +89,8 @@ unsafe fn show_frame_notification_blocking(color_bgr: u32, duration_ms: u64, are
             BeginPaint, CreateSolidBrush, DeleteObject, EndPaint, FillRect, PAINTSTRUCT,
         };
         use windows_sys::Win32::UI::WindowsAndMessaging::{
-            DefWindowProcW, GetClientRect, GetWindowLongPtrW, GWLP_USERDATA, WM_NCCREATE,
-            WM_NCDESTROY, WM_PAINT,
+            DefWindowProcW, GetClientRect, GetWindowLongPtrW, SetWindowLongPtrW, GWLP_USERDATA,
+            WM_NCCREATE, WM_NCDESTROY, WM_PAINT,
         };
 
         match msg {
