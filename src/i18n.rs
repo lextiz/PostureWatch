@@ -55,6 +55,7 @@ pub enum Key {
     StandReminderLabel,
     StandReminderHint,
     BreakReminderLabel,
+    FrameNotificationLabel,
     SessionMaxHint,
     DayMaxHint,
     NotifyEveryHint,
@@ -95,6 +96,7 @@ pub enum Key {
     TooltipStandReminderEnabled,
     TooltipStandReminderInterval,
     TooltipBreakReminderEnabled,
+    TooltipFrameNotification,
     TooltipSessionLimit,
     TooltipDailyLimit,
     TooltipBreakRepeat,
@@ -167,6 +169,8 @@ pub fn text(language: Language, key: Key) -> &'static str {
         (Language::Ru, Key::StandReminderHint) => "минут (1-480)",
         (Language::En, Key::BreakReminderLabel) => "Break reminder",
         (Language::Ru, Key::BreakReminderLabel) => "Напоминание о перерыве",
+        (Language::En, Key::FrameNotificationLabel) => "Enable frame notifications",
+        (Language::Ru, Key::FrameNotificationLabel) => "Включить рамку-уведомление",
         (Language::En, Key::SessionMaxHint) => "session max mins (1-480)",
         (Language::Ru, Key::SessionMaxHint) => "макс. сессия мин (1-480)",
         (Language::En, Key::DayMaxHint) => "day max mins (30-1440)",
@@ -275,6 +279,12 @@ pub fn text(language: Language, key: Key) -> &'static str {
         (Language::Ru, Key::TooltipStandReminderInterval) => "Минуты между напоминаниями встать.",
         (Language::En, Key::TooltipBreakReminderEnabled) => "Enable break reminders.",
         (Language::Ru, Key::TooltipBreakReminderEnabled) => "Включить напоминания о перерыве.",
+        (Language::En, Key::TooltipFrameNotification) => {
+            "Show a temporary colored frame overlay with notifications."
+        }
+        (Language::Ru, Key::TooltipFrameNotification) => {
+            "Показывать временную цветную рамку поверх экрана вместе с уведомлениями."
+        }
         (Language::En, Key::TooltipSessionLimit) => {
             "Session limit (minutes) before break reminders start."
         }
@@ -336,6 +346,7 @@ mod tests {
         Key::StandReminderLabel,
         Key::StandReminderHint,
         Key::BreakReminderLabel,
+        Key::FrameNotificationLabel,
         Key::SessionMaxHint,
         Key::DayMaxHint,
         Key::NotifyEveryHint,
@@ -376,6 +387,7 @@ mod tests {
         Key::TooltipStandReminderEnabled,
         Key::TooltipStandReminderInterval,
         Key::TooltipBreakReminderEnabled,
+        Key::TooltipFrameNotification,
         Key::TooltipSessionLimit,
         Key::TooltipDailyLimit,
         Key::TooltipBreakRepeat,
