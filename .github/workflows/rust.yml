@@ -102,6 +102,29 @@ jobs:
       - name: Build release (exe)
         run: cargo build --release
 
+      - name: Sign Windows executable
+        if: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+        shell: pwsh
+        run: |
+          [IO.File]::WriteAllBytes("windows-cert.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}"))
+          $signtool = (Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1).FullName
+
+          if (-not $signtool) {
+            throw "signtool.exe was not found on the runner"
+          }
+
+          & $signtool sign `
+            /fd SHA256 `
+            /td SHA256 `
+            /tr http://timestamp.digicert.com `
+            /f windows-cert.pfx `
+            /p "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" `
+            target/release/posturewatch.exe
+
+          Remove-Item windows-cert.pfx
+
       - name: Prepare release artifact
         shell: pwsh
         run: |
@@ -135,6 +158,41 @@ jobs:
 
       - name: Build release (macOS binary)
         run: cargo build --release
+
+      - name: Sign macOS binary
+        if: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_CODESIGN_IDENTITY != '' }}
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+        run: |
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > macos-cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security import macos-cert.p12 \
+            -k build.keychain \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          codesign --force --options runtime --timestamp --sign "$MACOS_CODESIGN_IDENTITY" target/release/posturewatch
+          rm -f macos-cert.p12
+
+      - name: Notarize macOS binary
+        if: ${{ secrets.MACOS_NOTARY_APPLE_ID != '' && secrets.MACOS_NOTARY_TEAM_ID != '' && secrets.MACOS_NOTARY_APP_PASSWORD != '' && secrets.MACOS_CERTIFICATE_P12_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_CODESIGN_IDENTITY != '' }}
+        env:
+          MACOS_NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          MACOS_NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          MACOS_NOTARY_APP_PASSWORD: ${{ secrets.MACOS_NOTARY_APP_PASSWORD }}
+        run: |
+          ditto -c -k --keepParent target/release/posturewatch posturewatch-macos.zip
+          xcrun notarytool submit posturewatch-macos.zip \
+            --apple-id "$MACOS_NOTARY_APPLE_ID" \
+            --team-id "$MACOS_NOTARY_TEAM_ID" \
+            --password "$MACOS_NOTARY_APP_PASSWORD" \
+            --wait
+          rm -f posturewatch-macos.zip
 
       - name: Prepare release artifact
         shell: bash
