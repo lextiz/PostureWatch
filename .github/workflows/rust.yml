@@ -1,4 +1,4 @@
-name: CI & Release
+name: ci
 
 on:
   pull_request:
