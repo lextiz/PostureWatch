@@ -28,6 +28,15 @@ This project is open source because better desk habits should be easier to build
 
 At the moment, OpenAI is the supported provider.
 
+## Release trust and OS security checks
+
+Official release artifacts are produced in GitHub Actions and signed before upload:
+
+- **Windows:** `PostureWatch.exe` is Authenticode-signed with a timestamp.
+- **macOS:** `PostureWatch-macos` is code-signed, and `PostureWatch-macos.zip` is submitted for notarization.
+
+If a build is distributed outside the official Releases page or without these steps, Windows SmartScreen and macOS Gatekeeper can flag it as suspicious.
+
 ## Privacy and trust
 
 PostureWatch uses your webcam and sends posture checks to the vision provider you configure, so please use a provider you trust and review its privacy terms.

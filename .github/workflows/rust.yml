@@ -113,6 +113,20 @@ jobs:
             throw 'Could not find release executable in target/release'
           }
 
+      - name: Sign Windows executable
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            throw "Missing signing secrets: WINDOWS_CERTIFICATE_PFX_BASE64 and/or WINDOWS_CERTIFICATE_PASSWORD"
+          }
+
+          [IO.File]::WriteAllBytes("codesign.pfx", [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
+          signtool sign /fd SHA256 /f codesign.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td SHA256 PostureWatch.exe
+          signtool verify /pa /v PostureWatch.exe
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -149,8 +163,47 @@ jobs:
           fi
           chmod +x PostureWatch-macos
 
+      - name: Import Apple signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+
+      - name: Codesign macOS binary
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+        run: |
+          if [ -z "${MACOS_CODESIGN_IDENTITY}" ]; then
+            echo "Missing signing secret: MACOS_CODESIGN_IDENTITY"
+            exit 1
+          fi
+
+          codesign --force --options runtime --timestamp --sign "${MACOS_CODESIGN_IDENTITY}" PostureWatch-macos
+          codesign --verify --deep --strict --verbose=2 PostureWatch-macos
+          spctl --assess --type execute --verbose=4 PostureWatch-macos
+
+      - name: Notarize macOS binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          if [ -z "${APPLE_ID}" ] || [ -z "${APPLE_TEAM_ID}" ] || [ -z "${APPLE_APP_SPECIFIC_PASSWORD}" ]; then
+            echo "Missing notarization secrets: APPLE_ID, APPLE_TEAM_ID, and/or APPLE_APP_SPECIFIC_PASSWORD"
+            exit 1
+          fi
+
+          ditto -c -k --sequesterRsrc --keepParent PostureWatch-macos PostureWatch-macos.zip
+          xcrun notarytool submit PostureWatch-macos.zip \
+            --apple-id "${APPLE_ID}" \
+            --team-id "${APPLE_TEAM_ID}" \
+            --password "${APPLE_APP_SPECIFIC_PASSWORD}" \
+            --wait
+
       - name: Upload macOS binary to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: main-${{ github.run_number }}
-          files: PostureWatch-macos
+          files: |
+            PostureWatch-macos
+            PostureWatch-macos.zip
