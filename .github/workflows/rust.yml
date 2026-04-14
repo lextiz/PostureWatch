@@ -114,18 +114,20 @@ jobs:
           }
 
       - name: Sign Windows executable
+        if: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE_PFX_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PFX_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            throw "Missing signing secrets: WINDOWS_CERTIFICATE_PFX_BASE64 and/or WINDOWS_CERTIFICATE_PASSWORD"
-          }
-
           [IO.File]::WriteAllBytes("codesign.pfx", [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX_BASE64))
           signtool sign /fd SHA256 /f codesign.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr http://timestamp.digicert.com /td SHA256 PostureWatch.exe
           signtool verify /pa /v PostureWatch.exe
+
+      - name: Skip Windows signing (secrets not configured)
+        if: ${{ secrets.WINDOWS_CERTIFICATE_PFX_BASE64 == '' || secrets.WINDOWS_CERTIFICATE_PASSWORD == '' }}
+        shell: pwsh
+        run: Write-Host "Skipping Windows code signing because WINDOWS_CERTIFICATE_PFX_BASE64 and/or WINDOWS_CERTIFICATE_PASSWORD is not set."
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
